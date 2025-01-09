@@ -41,7 +41,7 @@ Follow the example codes depending on your situation:
 - `NLN_example_train-test.py` if you have both a training dataset file (including validation) to learn a NLN and a test dataset file to test it;
 - `NLN_example_5-fold-cross-validation.py` if you wish to train, test and cross-validate on the same dataset file.
 
-The first time any `.csv` dataset file is used, prompts in the terminal will guide you to determine the types of your features (binary, categorical or continuous/ordinal) as well as which column(s) should be the target for classification (binary or categorical). If reformatting of the `.csv` file iteself is required, a copy will be created.
+The first time any `.csv` dataset file is used, prompts in the terminal will guide you to determine the types of your features (binary, categorical or continuous/ordinal) as well as which column(s) should be the target(s) for classification (binary or categorical). If reformatting of the `.csv` file iteself is required, a copy will be created.
 
 This current implementation of NLNs allows 3 use-cases:
 1. Binary Classification - a single binary target;
