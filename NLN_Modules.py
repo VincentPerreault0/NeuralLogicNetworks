@@ -2277,47 +2277,48 @@ class NeuralLogicNetwork(nn.Module):
         is_single_rule=False,
     ):
         if one_rule_at_a_time:
-            for out_OR_concept_idx in range(self.nb_out_concepts):
-                single_OR_copy = copy.deepcopy(self)
-                single_OR_copy.feature_names = single_OR_copy.feature_names[: single_OR_copy.nb_in_concepts] + [
-                    single_OR_copy.feature_names[-1 * (single_OR_copy.nb_out_concepts - out_OR_concept_idx)]
-                ]
-                single_OR_copy.nb_out_concepts = 1
-                single_OR_copy.layers[-1].observed_concepts.data = single_OR_copy.layers[-1].observed_concepts.data[out_OR_concept_idx : out_OR_concept_idx + 1, :]
-                single_OR_copy.layers[-1].unobserved_concepts.data = single_OR_copy.layers[-1].unobserved_concepts.data[out_OR_concept_idx : out_OR_concept_idx + 1]
-                single_OR_copy.layers[-1].nb_out_concepts = single_OR_copy.layers[-1].observed_concepts.data.size(0)
-                single_OR_copy.simplify()
-                if torch.max(single_OR_copy.layers[-1].observed_concepts.data) > 0:
-                    for mid_AND_concept_idx in range(single_OR_copy.layers[-1].nb_in_concepts):
-                        single_AND_copy = copy.deepcopy(single_OR_copy)
-                        single_AND_copy.layers[-1].observed_concepts.data = single_AND_copy.layers[-1].observed_concepts.data[:, mid_AND_concept_idx : mid_AND_concept_idx + 1]
-                        single_AND_copy.layers[-1].nb_in_concepts = single_AND_copy.layers[-1].observed_concepts.data.size(1)
-                        single_AND_copy.layers[-2].observed_concepts.data = single_AND_copy.layers[-2].observed_concepts.data[mid_AND_concept_idx : mid_AND_concept_idx + 1, :]
-                        single_AND_copy.layers[-2].unobserved_concepts.data = single_AND_copy.layers[-2].unobserved_concepts.data[mid_AND_concept_idx : mid_AND_concept_idx + 1]
-                        single_AND_copy.layers[-2].nb_out_concepts = single_AND_copy.layers[-2].observed_concepts.data.size(0)
-                        single_AND_copy.simplify()
-                        single_AND_copy.layers = single_AND_copy.layers[:-1]
-                        if filename == "":
-                            single_AND_copy.show(
-                                train_no_reg_loss=train_no_reg_loss,
-                                train_loss=train_loss,
-                                valid_raw_loss=valid_raw_loss,
-                                valid_stoch_loss=valid_stoch_loss,
-                                valid_thresh_loss=valid_thresh_loss,
-                                save_dpi=save_dpi,
-                                is_single_rule=True,
-                            )
-                        else:
-                            single_AND_copy.show(
-                                filename=filename + "_" + str(out_OR_concept_idx) + "-" + str(mid_AND_concept_idx),
-                                train_no_reg_loss=train_no_reg_loss,
-                                train_loss=train_loss,
-                                valid_raw_loss=valid_raw_loss,
-                                valid_stoch_loss=valid_stoch_loss,
-                                valid_thresh_loss=valid_thresh_loss,
-                                save_dpi=save_dpi,
-                                is_single_rule=True,
-                            )
+            if torch.max(self.layers[-1].observed_concepts).item() > 0:
+                for out_OR_concept_idx in range(self.nb_out_concepts):
+                    single_OR_copy = copy.deepcopy(self)
+                    single_OR_copy.feature_names = single_OR_copy.feature_names[: single_OR_copy.nb_in_concepts] + [
+                        single_OR_copy.feature_names[-1 * (single_OR_copy.nb_out_concepts - out_OR_concept_idx)]
+                    ]
+                    single_OR_copy.nb_out_concepts = 1
+                    single_OR_copy.layers[-1].observed_concepts.data = single_OR_copy.layers[-1].observed_concepts.data[out_OR_concept_idx : out_OR_concept_idx + 1, :]
+                    single_OR_copy.layers[-1].unobserved_concepts.data = single_OR_copy.layers[-1].unobserved_concepts.data[out_OR_concept_idx : out_OR_concept_idx + 1]
+                    single_OR_copy.layers[-1].nb_out_concepts = single_OR_copy.layers[-1].observed_concepts.data.size(0)
+                    single_OR_copy.simplify()
+                    if torch.max(single_OR_copy.layers[-1].observed_concepts.data) > 0:
+                        for mid_AND_concept_idx in range(single_OR_copy.layers[-1].nb_in_concepts):
+                            single_AND_copy = copy.deepcopy(single_OR_copy)
+                            single_AND_copy.layers[-1].observed_concepts.data = single_AND_copy.layers[-1].observed_concepts.data[:, mid_AND_concept_idx : mid_AND_concept_idx + 1]
+                            single_AND_copy.layers[-1].nb_in_concepts = single_AND_copy.layers[-1].observed_concepts.data.size(1)
+                            single_AND_copy.layers[-2].observed_concepts.data = single_AND_copy.layers[-2].observed_concepts.data[mid_AND_concept_idx : mid_AND_concept_idx + 1, :]
+                            single_AND_copy.layers[-2].unobserved_concepts.data = single_AND_copy.layers[-2].unobserved_concepts.data[mid_AND_concept_idx : mid_AND_concept_idx + 1]
+                            single_AND_copy.layers[-2].nb_out_concepts = single_AND_copy.layers[-2].observed_concepts.data.size(0)
+                            single_AND_copy.simplify()
+                            single_AND_copy.layers = single_AND_copy.layers[:-1]
+                            if filename == "":
+                                single_AND_copy.show(
+                                    train_no_reg_loss=train_no_reg_loss,
+                                    train_loss=train_loss,
+                                    valid_raw_loss=valid_raw_loss,
+                                    valid_stoch_loss=valid_stoch_loss,
+                                    valid_thresh_loss=valid_thresh_loss,
+                                    save_dpi=save_dpi,
+                                    is_single_rule=True,
+                                )
+                            else:
+                                single_AND_copy.show(
+                                    filename=filename + "_" + str(out_OR_concept_idx) + "-" + str(mid_AND_concept_idx),
+                                    train_no_reg_loss=train_no_reg_loss,
+                                    train_loss=train_loss,
+                                    valid_raw_loss=valid_raw_loss,
+                                    valid_stoch_loss=valid_stoch_loss,
+                                    valid_thresh_loss=valid_thresh_loss,
+                                    save_dpi=save_dpi,
+                                    is_single_rule=True,
+                                )
         else:
             # Helper Functions
             def text_fixed_size(
@@ -2429,359 +2430,242 @@ class NeuralLogicNetwork(nn.Module):
             x_step = 120
             y_step = 26
             x_node_buffer = 15
-            x_unobs_buffer = 10
+            x_indir_buffer = 10
             y_text_line = 12 * 1.25
 
-            # Find maximum layer width
-            nb_variables = (
-                len(self.input_module.binary_indices)
-                + len(self.input_module.category_modules)
-                + len(self.input_module.continuous_modules)
-                + len(self.input_module.periodic_modules)
-            )
-            input_module_group_widths = []
-            input_categories_used_in_values = []
-            for category_module in self.input_module.category_modules:
-                if not is_single_rule:
-                    input_module_group_widths.append(
-                        [
-                            category_module.nb_in_concepts,
-                            category_module.nb_out_concepts,
-                        ]
-                    )
-                else:
-                    input_categories_used_in_values.append(torch.nonzero(category_module.observed_concepts.data[0, :]).view(-1).tolist())
-                    input_module_group_widths.append([len(input_categories_used_in_values[-1]), 1])
-            for continuous_module in self.input_module.continuous_modules:
-                if not is_single_rule:
-                    input_module_group_widths.append(
-                        [
-                            continuous_module.dichotomies.nb_dichotomies,
-                            continuous_module.intervals.nb_out_concepts,
-                            continuous_module.out_concepts.nb_out_concepts,
-                        ]
-                    )
-                else:
-                    input_module_group_widths.append([5])
-            for periodic_module in self.input_module.periodic_modules:
-                input_module_group_widths.append(
-                    [
-                        periodic_module.dichotomies.nb_dichotomies,
-                        periodic_module.intervals.nb_out_concepts,
-                        periodic_module.out_concepts.nb_out_concepts,
-                    ]
-                )
-            if len(input_module_group_widths) > 0:
-                layer_width = max(
-                    len(self.input_module.binary_indices) + sum([max(group_widths) for group_widths in input_module_group_widths]),
-                    nb_variables,
-                )
-                layer_widths_with_spacing = [layer_width + nb_variables - 1]
-            else:
-                layer_widths_with_spacing = [nb_variables]
-            for layer in self.layers:
-                layer_widths_with_spacing.append(layer.nb_out_concepts)
-            max_layer_width_with_spacing = max(layer_widths_with_spacing)
+            if torch.max(self.layers[-1].observed_concepts).item() > 0:
 
-            # Find output indices
-            output_target_idcs = list(range(len(self.feature_names)))
-            for idx in self.binary_indices:
-                output_target_idcs.remove(idx)
-            for first_idx, last_idx in self.category_first_last_pairs:
-                for idx in range(first_idx, last_idx + 1):
-                    output_target_idcs.remove(idx)
-            for idx, min_value, max_value in self.continuous_index_min_max_triples:
-                output_target_idcs.remove(idx)
-            for idx, period in self.periodic_index_period_pairs:
-                output_target_idcs.remove(idx)
-
-            # Define figure
-            if train_loss >= 0 or train_no_reg_loss >= 0 or valid_raw_loss >= 0 or valid_stoch_loss >= 0 or valid_thresh_loss >= 0:
-                y_heading = 1.5 * y_step
-            else:
-                y_heading = 0
-            if not is_single_rule or len(self.input_module.continuous_modules) + len(self.input_module.periodic_modules) == 0:
-                height = y_step * max_layer_width_with_spacing + y_heading
-            else:
-                height = y_step * max_layer_width_with_spacing + y_heading + 1.05 * x_node_buffer
-            if len(input_module_group_widths) == 0:
-                width = x_step * (0.5 + 0.5 + len(self.layers) + 0.5 + 0.5) + x_node_buffer
-            else:
-                width = x_step * (0.5 + 0.5 + 2 + len(self.layers) + 0.5 + 0.5) + x_node_buffer
-            if is_single_rule:
-                width += 0.25 * x_step
-            if self.layers[-1].use_unobserved:
-                width += x_unobs_buffer
-            if filename != "":
-                plt.ion()
-            name = filename if filename != "" else "GNLN"
-            if fig_ax == -1:
-                fig, ax = plt.subplots(
-                    1,
-                    1,
-                    num=name,
-                    gridspec_kw={"left": 0.0, "right": 1.0, "bottom": 0.0, "top": 1.0},
+                # Find maximum layer width
+                nb_variables = (
+                    len(self.input_module.binary_indices)
+                    + len(self.input_module.category_modules)
+                    + len(self.input_module.continuous_modules)
+                    + len(self.input_module.periodic_modules)
                 )
-            else:
-                fig, ax = fig_ax
-            fig.set_frameon(False)
-            ax.spines["top"].set_visible(False)
-            ax.spines["right"].set_visible(False)
-            ax.spines["bottom"].set_visible(False)
-            ax.spines["left"].set_visible(False)
-            dpi = fig.get_dpi()
-            fig.set_size_inches(width / dpi, height / dpi)
-            ax.set_ylim(0, height)
-            ax.set_xlim(0, width)
-            ax.set_aspect("equal")
-
-            # Losses
-            current_y = height - 0.5 * y_step
-            if train_loss >= 0:
-                current_x = width * (0.2 / 5)
-                text_fixed_size(ax, current_x, current_y, f"{train_loss:.3e}", h=12, align_left=True)
-            if train_no_reg_loss >= 0:
-                current_x = width * (1.2 / 5)
-                text_fixed_size(
-                    ax,
-                    current_x,
-                    current_y,
-                    f"{train_no_reg_loss:.3e}",
-                    h=12,
-                    align_left=True,
-                )
-            if valid_raw_loss >= 0:
-                current_x = width * (2.2 / 5)
-                text_fixed_size(
-                    ax,
-                    current_x,
-                    current_y,
-                    f"{valid_raw_loss:.3e}",
-                    h=12,
-                    align_left=True,
-                )
-            if valid_stoch_loss >= 0:
-                current_x = width * (3.2 / 5)
-                text_fixed_size(
-                    ax,
-                    current_x,
-                    current_y,
-                    f"{valid_stoch_loss:.3e}",
-                    h=12,
-                    align_left=True,
-                )
-            if valid_thresh_loss >= 0:
-                current_x = width * (4.2 / 5)
-                text_fixed_size(
-                    ax,
-                    current_x,
-                    current_y,
-                    f"{valid_thresh_loss:.3e}",
-                    h=12,
-                    align_left=True,
-                )
-
-            # Binary Inputs
-            coordinates = [[]]
-            if layer_widths_with_spacing[0] == max_layer_width_with_spacing:
-                input_y_step = y_step
-            else:
-                input_y_step = (max_layer_width_with_spacing - 1) / layer_widths_with_spacing[0] * y_step
-            if len(input_module_group_widths) > 0 or layer_widths_with_spacing[0] == max_layer_width_with_spacing:
-                current_y = height - y_heading - 0.5 * y_step
-            else:
-                current_y = height - y_heading - 0.5 * y_step - input_y_step / 2
-            for idx in self.input_module.binary_indices:
-                current_x = 0.5 * x_step
-                text_fixed_size(ax, current_x, current_y, self.feature_names[idx])
-                if len(input_module_group_widths) > 0:
-                    arrow(
-                        ax,
-                        current_x + 0.5 * x_step,
-                        current_y,
-                        current_x + 2.5 * x_step + x_node_buffer,
-                        current_y,
-                    )
-                    coordinates[-1].append((current_x + 2.5 * x_step, current_y))
-                else:
-                    coordinates[-1].append((current_x + 0.5 * x_step, current_y))
-                if len(input_module_group_widths) > 0:
-                    current_y -= 2 * input_y_step
-                else:
-                    current_y -= input_y_step
-            if len(input_module_group_widths) == 0:
-                current_x += 0.5 * x_step
-
-            # Category Inputs
-            group_idx = 0
-            for i, category_module in enumerate(self.input_module.category_modules):
-                first_idx, last_idx = self.input_module.category_first_last_pairs[i]
-                current_x = 0.5 * x_step
-                loc_current_y = current_y - input_y_step * (max(input_module_group_widths[group_idx]) - 1) / 2
-                text_fixed_size(
-                    ax,
-                    current_x,
-                    loc_current_y,
-                    self.feature_names[first_idx].split("_")[0],
-                )
-                group_coordinates = [[]]
-                current_x += x_step
-                if input_module_group_widths[group_idx][0] == max(input_module_group_widths[group_idx]):
-                    loc_current_y = current_y
-                else:
-                    loc_current_y = current_y - input_y_step * ((max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][0]) / 2
-                for idx in range(first_idx, last_idx + 1):
-                    if not is_single_rule or idx - first_idx in input_categories_used_in_values[i]:
-                        text_fixed_size(
-                            ax,
-                            current_x,
-                            loc_current_y,
-                            self.feature_names[idx].split("_")[1],
+                input_module_group_widths = []
+                input_categories_used_in_values = []
+                for category_module in self.input_module.category_modules:
+                    if not is_single_rule:
+                        input_module_group_widths.append(
+                            [
+                                category_module.nb_in_concepts,
+                                category_module.nb_out_concepts,
+                            ]
                         )
-                        group_coordinates[-1].append((current_x + 0.5 * x_step, loc_current_y))
-                        if input_module_group_widths[group_idx][0] == max(input_module_group_widths[group_idx]):
-                            loc_current_y -= input_y_step
-                        else:
-                            loc_current_y -= input_y_step * (max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][0]
-                group_coordinates.append([])
-                current_x += 1.5 * x_step
-                if input_module_group_widths[group_idx][1] == max(input_module_group_widths[group_idx]):
-                    loc_current_y = current_y
-                else:
-                    loc_current_y = current_y - input_y_step * ((max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][1]) / 2
-                for out_concept in range(category_module.nb_out_concepts):
-                    OR_node(ax, current_x, loc_current_y)
-                    group_coordinates[-1].append((current_x, loc_current_y))
-                    coordinates[-1].append((current_x, loc_current_y))
-                    if input_module_group_widths[group_idx][1] == max(input_module_group_widths[group_idx]):
-                        loc_current_y -= input_y_step
                     else:
-                        loc_current_y -= input_y_step * (max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][1]
-                for in_concept in range(category_module.nb_in_concepts):
-                    for out_concept in range(category_module.nb_out_concepts):
-                        weight = category_module.observed_concepts.data[out_concept, in_concept].item()
-                        if weight > 0:
-                            if is_single_rule:
-                                in_concept = input_categories_used_in_values[i].index(in_concept)
-                            arrow(
-                                ax,
-                                group_coordinates[-2][in_concept][0],
-                                group_coordinates[-2][in_concept][1],
-                                group_coordinates[-1][out_concept][0] - x_node_buffer,
-                                group_coordinates[-1][out_concept][1],
-                                color="k",
-                                alpha=weight,
-                            )
-                current_y -= input_y_step * (max(input_module_group_widths[group_idx]) + 1)
-                group_idx += 1
-
-            # Continuous Inputs
-            for i, continuous_module in enumerate(self.input_module.continuous_modules):
-                idx, min_value, max_value = self.input_module.continuous_index_min_max_triples[i]
-                current_x = 0.5 * x_step
-                loc_current_y = current_y - input_y_step * (max(input_module_group_widths[group_idx]) - 1) / 2
-                text_fixed_size(
-                    ax,
-                    current_x,
-                    loc_current_y + y_text_line / 2,
-                    self.feature_names[idx],
-                )
-                text_fixed_size(
-                    ax,
-                    current_x,
-                    loc_current_y - y_text_line / 2,
-                    "[" + str(min_value) + ", " + str(max_value) + "]",
-                )
-                if is_single_rule:
-                    axins3 = inset_axes(
-                        ax,
-                        width="100%",
-                        height="100%",
-                        bbox_to_anchor=(
-                            (current_x + 0.5 * x_step + x_node_buffer) / width,
-                            (loc_current_y - input_y_step * (max(input_module_group_widths[group_idx]) - 1) / 2) / height,
-                            (2 * x_step) / width,
-                            (y_step * (max(input_module_group_widths[group_idx]) - 1) + x_node_buffer) / height,
-                        ),
-                        bbox_transform=ax.transAxes,
+                        input_categories_used_in_values.append(torch.nonzero(category_module.observed_concepts.data[0, :]).view(-1).tolist())
+                        input_module_group_widths.append([len(input_categories_used_in_values[-1]), 1])
+                for continuous_module in self.input_module.continuous_modules:
+                    if not is_single_rule:
+                        input_module_group_widths.append(
+                            [
+                                continuous_module.dichotomies.nb_dichotomies,
+                                continuous_module.intervals.nb_out_concepts,
+                                continuous_module.out_concepts.nb_out_concepts,
+                            ]
+                        )
+                    else:
+                        input_module_group_widths.append([5])
+                for periodic_module in self.input_module.periodic_modules:
+                    input_module_group_widths.append(
+                        [
+                            periodic_module.dichotomies.nb_dichotomies,
+                            periodic_module.intervals.nb_out_concepts,
+                            periodic_module.out_concepts.nb_out_concepts,
+                        ]
                     )
-                    plot_x_coordinates = [min_value + point_idx * (max_value - min_value) / 255 for point_idx in range(256)]
-                    torch_plot_x_coordinates = torch.tensor(plot_x_coordinates, device=self.device).view(-1, 1)
-                    continuous_copy = copy.deepcopy(self)
-                    (
-                        continuous_module_first_idx,
-                        continuous_module_stop_idx,
-                    ) = continuous_copy.layers[
-                        -1
-                    ].in_concepts_group_first_stop_pairs[len(self.input_module.category_modules) + i]
-                    continuous_copy.layers[-1].observed_concepts.data[:, :continuous_module_first_idx] = 0
-                    continuous_copy.layers[-1].observed_concepts.data[:, continuous_module_stop_idx:] = 0
-                    continuous_copy.layers[-1].unobserved_concepts.data[:] = 1
-                    continuous_copy.simplify()
-                    continuous_copy.input_module.continuous_index_min_max_triples = [(0, min_value, max_value)]
-                    continuous_copy.eval()
-                    torch_plot_y_coordinates = continuous_copy.forward(torch_plot_x_coordinates)
-                    axins3.plot(
-                        plot_x_coordinates,
-                        torch_plot_y_coordinates.view(-1).cpu().tolist(),
+                if len(input_module_group_widths) > 0:
+                    layer_width = max(
+                        len(self.input_module.binary_indices) + sum([max(group_widths) for group_widths in input_module_group_widths]),
+                        nb_variables,
                     )
-                    axins3.set_xlim([min_value, max_value])
-                    axins3.set_xticks(continuous_module.dichotomies.boundaries.data.view(-1).tolist())
-                    axins3.set_ylim([-0.01, 1.02])
-                    axins3.set_yticks([0, 1])
-                    current_x += 2.5 * x_step
-                    coordinates[-1].append((current_x, loc_current_y))
+                    layer_widths_with_spacing = [layer_width + nb_variables - 1]
                 else:
+                    layer_widths_with_spacing = [nb_variables]
+                for layer in self.layers:
+                    layer_widths_with_spacing.append(layer.nb_out_concepts)
+                max_layer_width_with_spacing = max(layer_widths_with_spacing)
+
+                # Find output indices
+                output_target_idcs = list(range(len(self.feature_names)))
+                for idx in self.binary_indices:
+                    output_target_idcs.remove(idx)
+                for first_idx, last_idx in self.category_first_last_pairs:
+                    for idx in range(first_idx, last_idx + 1):
+                        output_target_idcs.remove(idx)
+                for idx, min_value, max_value in self.continuous_index_min_max_triples:
+                    output_target_idcs.remove(idx)
+                for idx, period in self.periodic_index_period_pairs:
+                    output_target_idcs.remove(idx)
+
+                # Define figure
+                if train_loss >= 0 or train_no_reg_loss >= 0 or valid_raw_loss >= 0 or valid_stoch_loss >= 0 or valid_thresh_loss >= 0:
+                    y_heading = 1.5 * y_step
+                else:
+                    y_heading = 0
+                if not is_single_rule or len(self.input_module.continuous_modules) + len(self.input_module.periodic_modules) == 0:
+                    height = y_step * max_layer_width_with_spacing + y_heading
+                else:
+                    height = y_step * max_layer_width_with_spacing + y_heading + 1.05 * x_node_buffer
+                if len(input_module_group_widths) == 0:
+                    width = x_step * (0.5 + 0.5 + len(self.layers) + 0.5 + 0.5) + x_node_buffer
+                else:
+                    width = x_step * (0.5 + 0.5 + 2 + len(self.layers) + 0.5 + 0.5) + x_node_buffer
+                if is_single_rule:
+                    width += 0.25 * x_step
+                if self.layers[-1].use_unobserved:
+                    width += x_indir_buffer
+                if filename != "":
+                    plt.ion()
+                name = filename if filename != "" else "GNLN"
+                if fig_ax == -1:
+                    fig, ax = plt.subplots(
+                        1,
+                        1,
+                        num=name,
+                        gridspec_kw={"left": 0.0, "right": 1.0, "bottom": 0.0, "top": 1.0},
+                    )
+                else:
+                    fig, ax = fig_ax
+                fig.set_frameon(False)
+                ax.spines["top"].set_visible(False)
+                ax.spines["right"].set_visible(False)
+                ax.spines["bottom"].set_visible(False)
+                ax.spines["left"].set_visible(False)
+                dpi = fig.get_dpi()
+                fig.set_size_inches(width / dpi, height / dpi)
+                ax.set_ylim(0, height)
+                ax.set_xlim(0, width)
+                ax.set_aspect("equal")
+
+                # Losses
+                current_y = height - 0.5 * y_step
+                if train_loss >= 0:
+                    current_x = width * (0.2 / 5)
+                    text_fixed_size(ax, current_x, current_y, f"{train_loss:.3e}", h=12, align_left=True)
+                if train_no_reg_loss >= 0:
+                    current_x = width * (1.2 / 5)
+                    text_fixed_size(
+                        ax,
+                        current_x,
+                        current_y,
+                        f"{train_no_reg_loss:.3e}",
+                        h=12,
+                        align_left=True,
+                    )
+                if valid_raw_loss >= 0:
+                    current_x = width * (2.2 / 5)
+                    text_fixed_size(
+                        ax,
+                        current_x,
+                        current_y,
+                        f"{valid_raw_loss:.3e}",
+                        h=12,
+                        align_left=True,
+                    )
+                if valid_stoch_loss >= 0:
+                    current_x = width * (3.2 / 5)
+                    text_fixed_size(
+                        ax,
+                        current_x,
+                        current_y,
+                        f"{valid_stoch_loss:.3e}",
+                        h=12,
+                        align_left=True,
+                    )
+                if valid_thresh_loss >= 0:
+                    current_x = width * (4.2 / 5)
+                    text_fixed_size(
+                        ax,
+                        current_x,
+                        current_y,
+                        f"{valid_thresh_loss:.3e}",
+                        h=12,
+                        align_left=True,
+                    )
+
+                # Binary Inputs
+                coordinates = [[]]
+                if layer_widths_with_spacing[0] == max_layer_width_with_spacing:
+                    input_y_step = y_step
+                else:
+                    input_y_step = (max_layer_width_with_spacing - 1) / layer_widths_with_spacing[0] * y_step
+                if len(input_module_group_widths) > 0 or layer_widths_with_spacing[0] == max_layer_width_with_spacing:
+                    current_y = height - y_heading - 0.5 * y_step
+                else:
+                    current_y = height - y_heading - 0.5 * y_step - input_y_step / 2
+                for idx in self.input_module.binary_indices:
+                    current_x = 0.5 * x_step
+                    text_fixed_size(ax, current_x, current_y, self.feature_names[idx])
+                    if len(input_module_group_widths) > 0:
+                        arrow(
+                            ax,
+                            current_x + 0.5 * x_step,
+                            current_y,
+                            current_x + 2.5 * x_step + x_node_buffer,
+                            current_y,
+                        )
+                        coordinates[-1].append((current_x + 2.5 * x_step, current_y))
+                    else:
+                        coordinates[-1].append((current_x + 0.5 * x_step, current_y))
+                    if len(input_module_group_widths) > 0:
+                        current_y -= 2 * input_y_step
+                    else:
+                        current_y -= input_y_step
+                if len(input_module_group_widths) == 0:
+                    current_x += 0.5 * x_step
+
+                # Category Inputs
+                group_idx = 0
+                for i, category_module in enumerate(self.input_module.category_modules):
+                    first_idx, last_idx = self.input_module.category_first_last_pairs[i]
+                    current_x = 0.5 * x_step
+                    loc_current_y = current_y - input_y_step * (max(input_module_group_widths[group_idx]) - 1) / 2
+                    text_fixed_size(
+                        ax,
+                        current_x,
+                        loc_current_y,
+                        self.feature_names[first_idx].split("_")[0],
+                    )
                     group_coordinates = [[]]
                     current_x += x_step
                     if input_module_group_widths[group_idx][0] == max(input_module_group_widths[group_idx]):
                         loc_current_y = current_y
                     else:
                         loc_current_y = current_y - input_y_step * ((max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][0]) / 2
-                    for dichotomy in range(continuous_module.dichotomies.nb_dichotomies):
-                        dichotomy_string = "approx. > " if continuous_module.dichotomies.sharpnesses.data[dichotomy].item() < 2 else "exactly > "
-                        dichotomy_string += str(
-                            round(
-                                continuous_module.dichotomies.boundaries.data[dichotomy].item(),
-                                1,
+                    for idx in range(first_idx, last_idx + 1):
+                        if not is_single_rule or idx - first_idx in input_categories_used_in_values[i]:
+                            text_fixed_size(
+                                ax,
+                                current_x,
+                                loc_current_y,
+                                self.feature_names[idx].split("_")[1],
                             )
-                        )
-                        text_fixed_size(ax, current_x, loc_current_y, dichotomy_string)
-                        group_coordinates[-1].append((current_x + 0.5 * x_step, loc_current_y))
-                        if input_module_group_widths[group_idx][0] == max(input_module_group_widths[group_idx]):
-                            loc_current_y -= input_y_step
-                        else:
-                            loc_current_y -= input_y_step * (max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][0]
+                            group_coordinates[-1].append((current_x + 0.5 * x_step, loc_current_y))
+                            if input_module_group_widths[group_idx][0] == max(input_module_group_widths[group_idx]):
+                                loc_current_y -= input_y_step
+                            else:
+                                loc_current_y -= input_y_step * (max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][0]
                     group_coordinates.append([])
-                    current_x += x_step
+                    current_x += 1.5 * x_step
                     if input_module_group_widths[group_idx][1] == max(input_module_group_widths[group_idx]):
                         loc_current_y = current_y
                     else:
                         loc_current_y = current_y - input_y_step * ((max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][1]) / 2
-                    for interval in range(continuous_module.intervals.nb_out_concepts):
-                        AND_node(ax, current_x, loc_current_y)
+                    for out_concept in range(category_module.nb_out_concepts):
+                        OR_node(ax, current_x, loc_current_y)
                         group_coordinates[-1].append((current_x, loc_current_y))
+                        coordinates[-1].append((current_x, loc_current_y))
                         if input_module_group_widths[group_idx][1] == max(input_module_group_widths[group_idx]):
                             loc_current_y -= input_y_step
                         else:
                             loc_current_y -= input_y_step * (max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][1]
-                    for in_concept in range(continuous_module.intervals.nb_in_concepts):
-                        for out_concept in range(continuous_module.intervals.nb_out_concepts):
-                            weight = continuous_module.intervals.observed_concepts.data[out_concept, in_concept].item()
-                            if weight < 0:
-                                arrow(
-                                    ax,
-                                    group_coordinates[-2][in_concept][0],
-                                    group_coordinates[-2][in_concept][1],
-                                    group_coordinates[-1][out_concept][0] - x_node_buffer,
-                                    group_coordinates[-1][out_concept][1],
-                                    color="r",
-                                    alpha=abs(weight),
-                                )
-                    for in_concept in range(continuous_module.intervals.nb_in_concepts):
-                        for out_concept in range(continuous_module.intervals.nb_out_concepts):
-                            weight = continuous_module.intervals.observed_concepts.data[out_concept, in_concept].item()
+                    for in_concept in range(category_module.nb_in_concepts):
+                        for out_concept in range(category_module.nb_out_concepts):
+                            weight = category_module.observed_concepts.data[out_concept, in_concept].item()
                             if weight > 0:
+                                if is_single_rule:
+                                    in_concept = input_categories_used_in_values[i].index(in_concept)
                                 arrow(
                                     ax,
                                     group_coordinates[-2][in_concept][0],
@@ -2791,57 +2675,376 @@ class NeuralLogicNetwork(nn.Module):
                                     color="k",
                                     alpha=weight,
                                 )
-                    group_coordinates.append([])
-                    current_x += 0.5 * x_step
-                    if input_module_group_widths[group_idx][2] == max(input_module_group_widths[group_idx]):
-                        loc_current_y = current_y
-                    else:
-                        loc_current_y = current_y - input_y_step * ((max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][2]) / 2
-                    for out_concept in range(continuous_module.out_concepts.nb_out_concepts):
-                        OR_node(ax, current_x, loc_current_y)
-                        group_coordinates[-1].append((current_x, loc_current_y))
+                    current_y -= input_y_step * (max(input_module_group_widths[group_idx]) + 1)
+                    group_idx += 1
+
+                # Continuous Inputs
+                for i, continuous_module in enumerate(self.input_module.continuous_modules):
+                    idx, min_value, max_value = self.input_module.continuous_index_min_max_triples[i]
+                    current_x = 0.5 * x_step
+                    loc_current_y = current_y - input_y_step * (max(input_module_group_widths[group_idx]) - 1) / 2
+                    text_fixed_size(
+                        ax,
+                        current_x,
+                        loc_current_y + y_text_line / 2,
+                        self.feature_names[idx],
+                    )
+                    text_fixed_size(
+                        ax,
+                        current_x,
+                        loc_current_y - y_text_line / 2,
+                        "[" + str(min_value) + ", " + str(max_value) + "]",
+                    )
+                    if is_single_rule:
+                        axins3 = inset_axes(
+                            ax,
+                            width="100%",
+                            height="100%",
+                            bbox_to_anchor=(
+                                (current_x + 0.5 * x_step + x_node_buffer) / width,
+                                (loc_current_y - input_y_step * (max(input_module_group_widths[group_idx]) - 1) / 2) / height,
+                                (2 * x_step) / width,
+                                (y_step * (max(input_module_group_widths[group_idx]) - 1) + x_node_buffer) / height,
+                            ),
+                            bbox_transform=ax.transAxes,
+                        )
+                        plot_x_coordinates = [min_value + point_idx * (max_value - min_value) / 255 for point_idx in range(256)]
+                        torch_plot_x_coordinates = torch.tensor(plot_x_coordinates, device=self.device).view(-1, 1)
+                        continuous_copy = copy.deepcopy(self)
+                        (
+                            continuous_module_first_idx,
+                            continuous_module_stop_idx,
+                        ) = continuous_copy.layers[
+                            -1
+                        ].in_concepts_group_first_stop_pairs[len(self.input_module.category_modules) + i]
+                        continuous_copy.layers[-1].observed_concepts.data[:, :continuous_module_first_idx] = 0
+                        continuous_copy.layers[-1].observed_concepts.data[:, continuous_module_stop_idx:] = 0
+                        continuous_copy.layers[-1].unobserved_concepts.data[:] = 1
+                        continuous_copy.simplify()
+                        continuous_copy.input_module.continuous_index_min_max_triples = [(0, min_value, max_value)]
+                        continuous_copy.eval()
+                        torch_plot_y_coordinates = continuous_copy.forward(torch_plot_x_coordinates)
+                        axins3.plot(
+                            plot_x_coordinates,
+                            torch_plot_y_coordinates.view(-1).cpu().tolist(),
+                        )
+                        axins3.set_xlim([min_value, max_value])
+                        axins3.set_xticks(continuous_module.dichotomies.boundaries.data.view(-1).tolist())
+                        axins3.set_ylim([-0.01, 1.02])
+                        axins3.set_yticks([0, 1])
+                        current_x += 2.5 * x_step
                         coordinates[-1].append((current_x, loc_current_y))
-                        if input_module_group_widths[group_idx][2] == max(input_module_group_widths[group_idx]):
-                            loc_current_y -= input_y_step
+                    else:
+                        group_coordinates = [[]]
+                        current_x += x_step
+                        if input_module_group_widths[group_idx][0] == max(input_module_group_widths[group_idx]):
+                            loc_current_y = current_y
                         else:
-                            loc_current_y -= input_y_step * (max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][2]
-                    for in_concept in range(continuous_module.out_concepts.nb_in_concepts):
-                        for out_concept in range(continuous_module.out_concepts.nb_out_concepts):
-                            weight = continuous_module.out_concepts.observed_concepts.data[out_concept, in_concept].item()
-                            if weight > 0:
-                                arrow(
-                                    ax,
-                                    group_coordinates[-2][in_concept][0] + x_node_buffer,
-                                    group_coordinates[-2][in_concept][1],
-                                    group_coordinates[-1][out_concept][0] - x_node_buffer,
-                                    group_coordinates[-1][out_concept][1],
-                                    color="k",
-                                    alpha=weight,
+                            loc_current_y = current_y - input_y_step * ((max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][0]) / 2
+                        for dichotomy in range(continuous_module.dichotomies.nb_dichotomies):
+                            dichotomy_string = "approx. > " if continuous_module.dichotomies.sharpnesses.data[dichotomy].item() < 2 else "exactly > "
+                            dichotomy_string += str(
+                                round(
+                                    continuous_module.dichotomies.boundaries.data[dichotomy].item(),
+                                    1,
                                 )
-                current_y -= input_y_step * (max(input_module_group_widths[group_idx]) + 1)
-                group_idx += 1
+                            )
+                            text_fixed_size(ax, current_x, loc_current_y, dichotomy_string)
+                            group_coordinates[-1].append((current_x + 0.5 * x_step, loc_current_y))
+                            if input_module_group_widths[group_idx][0] == max(input_module_group_widths[group_idx]):
+                                loc_current_y -= input_y_step
+                            else:
+                                loc_current_y -= input_y_step * (max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][0]
+                        group_coordinates.append([])
+                        current_x += x_step
+                        if input_module_group_widths[group_idx][1] == max(input_module_group_widths[group_idx]):
+                            loc_current_y = current_y
+                        else:
+                            loc_current_y = current_y - input_y_step * ((max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][1]) / 2
+                        for interval in range(continuous_module.intervals.nb_out_concepts):
+                            AND_node(ax, current_x, loc_current_y)
+                            group_coordinates[-1].append((current_x, loc_current_y))
+                            if input_module_group_widths[group_idx][1] == max(input_module_group_widths[group_idx]):
+                                loc_current_y -= input_y_step
+                            else:
+                                loc_current_y -= input_y_step * (max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][1]
+                        for in_concept in range(continuous_module.intervals.nb_in_concepts):
+                            for out_concept in range(continuous_module.intervals.nb_out_concepts):
+                                weight = continuous_module.intervals.observed_concepts.data[out_concept, in_concept].item()
+                                if weight < 0:
+                                    arrow(
+                                        ax,
+                                        group_coordinates[-2][in_concept][0],
+                                        group_coordinates[-2][in_concept][1],
+                                        group_coordinates[-1][out_concept][0] - x_node_buffer,
+                                        group_coordinates[-1][out_concept][1],
+                                        color="r",
+                                        alpha=abs(weight),
+                                    )
+                        for in_concept in range(continuous_module.intervals.nb_in_concepts):
+                            for out_concept in range(continuous_module.intervals.nb_out_concepts):
+                                weight = continuous_module.intervals.observed_concepts.data[out_concept, in_concept].item()
+                                if weight > 0:
+                                    arrow(
+                                        ax,
+                                        group_coordinates[-2][in_concept][0],
+                                        group_coordinates[-2][in_concept][1],
+                                        group_coordinates[-1][out_concept][0] - x_node_buffer,
+                                        group_coordinates[-1][out_concept][1],
+                                        color="k",
+                                        alpha=weight,
+                                    )
+                        group_coordinates.append([])
+                        current_x += 0.5 * x_step
+                        if input_module_group_widths[group_idx][2] == max(input_module_group_widths[group_idx]):
+                            loc_current_y = current_y
+                        else:
+                            loc_current_y = current_y - input_y_step * ((max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][2]) / 2
+                        for out_concept in range(continuous_module.out_concepts.nb_out_concepts):
+                            OR_node(ax, current_x, loc_current_y)
+                            group_coordinates[-1].append((current_x, loc_current_y))
+                            coordinates[-1].append((current_x, loc_current_y))
+                            if input_module_group_widths[group_idx][2] == max(input_module_group_widths[group_idx]):
+                                loc_current_y -= input_y_step
+                            else:
+                                loc_current_y -= input_y_step * (max(input_module_group_widths[group_idx]) - 1) / input_module_group_widths[group_idx][2]
+                        for in_concept in range(continuous_module.out_concepts.nb_in_concepts):
+                            for out_concept in range(continuous_module.out_concepts.nb_out_concepts):
+                                weight = continuous_module.out_concepts.observed_concepts.data[out_concept, in_concept].item()
+                                if weight > 0:
+                                    arrow(
+                                        ax,
+                                        group_coordinates[-2][in_concept][0] + x_node_buffer,
+                                        group_coordinates[-2][in_concept][1],
+                                        group_coordinates[-1][out_concept][0] - x_node_buffer,
+                                        group_coordinates[-1][out_concept][1],
+                                        color="k",
+                                        alpha=weight,
+                                    )
+                    current_y -= input_y_step * (max(input_module_group_widths[group_idx]) + 1)
+                    group_idx += 1
 
-            # Periodic Inputs
-            for idx, period in self.input_module.periodic_index_period_pairs:
-                current_x = 0.5 * x_step
-                loc_current_y = current_y - input_y_step * (max(input_module_group_widths[group_idx]) - 1) / 2
-                text_fixed_size(ax, current_x, loc_current_y, self.feature_names[idx])
-                raise Exception("Case with periodic inputs not coded yet.")
-                # TODO do dichotomies
-                # TODO do intervals
-                # TODO do collections
-                current_y -= y_step * (max(input_module_group_widths[group_idx]) + 1)
-                group_idx += 1
+                # Periodic Inputs
+                for idx, period in self.input_module.periodic_index_period_pairs:
+                    current_x = 0.5 * x_step
+                    loc_current_y = current_y - input_y_step * (max(input_module_group_widths[group_idx]) - 1) / 2
+                    text_fixed_size(ax, current_x, loc_current_y, self.feature_names[idx])
+                    raise Exception("Case with periodic inputs not coded yet.")
+                    # TODO do dichotomies
+                    # TODO do intervals
+                    # TODO do collections
+                    current_y -= y_step * (max(input_module_group_widths[group_idx]) + 1)
+                    group_idx += 1
 
-            # Fully-Connected Layers
-            layer_width_idx = 1
-            for i, layer in enumerate(self.layers):
-                coordinates.append([])
-                current_x += x_step
-                if layer_widths_with_spacing[layer_width_idx] == max_layer_width_with_spacing:
+                # Fully-Connected Layers
+                layer_width_idx = 1
+                for i, layer in enumerate(self.layers):
+                    coordinates.append([])
+                    current_x += x_step
+                    if layer_widths_with_spacing[layer_width_idx] == max_layer_width_with_spacing:
+                        current_y = height - y_heading - 0.5 * y_step
+                    else:
+                        current_y = height - y_heading - 0.5 * y_step - y_step * ((max_layer_width_with_spacing - 1) / layer_widths_with_spacing[layer_width_idx]) / 2
+                    for out_concept in range(layer.nb_out_concepts):
+                        if layer.is_AND:
+                            if layer.use_unobserved:
+                                AND_node(
+                                    ax,
+                                    current_x,
+                                    current_y,
+                                    unobserved_concept=layer.unobserved_concepts.data[out_concept].item(),
+                                )
+                            else:
+                                AND_node(ax, current_x, current_y)
+                        else:
+                            if layer.use_unobserved:
+                                OR_node(
+                                    ax,
+                                    current_x,
+                                    current_y,
+                                    unobserved_concept=layer.unobserved_concepts.data[out_concept].item(),
+                                )
+                            else:
+                                OR_node(ax, current_x, current_y)
+                        coordinates[-1].append((current_x, current_y))
+                        if layer_widths_with_spacing[layer_width_idx] == max_layer_width_with_spacing:
+                            current_y -= y_step
+                        else:
+                            current_y -= y_step * (max_layer_width_with_spacing - 1) / layer_widths_with_spacing[layer_width_idx]
+                    in_has_indir = i > 0 and self.layers[i - 1].use_unobserved
+                    if is_single_rule:
+                        max_bin_cat_idx = len(self.input_module.binary_indices) + sum([category_module.nb_out_concepts for category_module in self.input_module.category_modules])
+                    for in_concept in range(layer.nb_in_concepts):
+                        if not is_single_rule or in_concept < max_bin_cat_idx:
+                            for out_concept in range(layer.nb_out_concepts):
+                                weight = layer.observed_concepts.data[out_concept, in_concept].item()
+                                if weight < 0:
+                                    if in_has_indir:
+                                        arrow(
+                                            ax,
+                                            coordinates[-2][in_concept][0] + x_node_buffer + x_indir_buffer,
+                                            coordinates[-2][in_concept][1],
+                                            coordinates[-1][out_concept][0] - x_node_buffer,
+                                            coordinates[-1][out_concept][1],
+                                            color="r",
+                                            alpha=abs(weight),
+                                        )
+                                    else:
+                                        arrow(
+                                            ax,
+                                            coordinates[-2][in_concept][0] + x_node_buffer,
+                                            coordinates[-2][in_concept][1],
+                                            coordinates[-1][out_concept][0] - x_node_buffer,
+                                            coordinates[-1][out_concept][1],
+                                            color="r",
+                                            alpha=abs(weight),
+                                        )
+                    for in_concept in range(layer.nb_in_concepts):
+                        if not is_single_rule or in_concept < max_bin_cat_idx:
+                            for out_concept in range(layer.nb_out_concepts):
+                                weight = layer.observed_concepts.data[out_concept, in_concept].item()
+                                if weight > 0:
+                                    if in_has_indir:
+                                        arrow(
+                                            ax,
+                                            coordinates[-2][in_concept][0] + x_node_buffer + x_indir_buffer,
+                                            coordinates[-2][in_concept][1],
+                                            coordinates[-1][out_concept][0] - x_node_buffer,
+                                            coordinates[-1][out_concept][1],
+                                            color="k",
+                                            alpha=weight,
+                                        )
+                                    else:
+                                        arrow(
+                                            ax,
+                                            coordinates[-2][in_concept][0] + x_node_buffer,
+                                            coordinates[-2][in_concept][1],
+                                            coordinates[-1][out_concept][0] - x_node_buffer,
+                                            coordinates[-1][out_concept][1],
+                                            color="k",
+                                            alpha=weight,
+                                        )
+                    if is_single_rule:
+                        in_concept = max_bin_cat_idx
+                        for continuous_module in self.input_module.continuous_modules:
+                            arrow(
+                                ax,
+                                coordinates[-2][in_concept][0] + x_node_buffer,
+                                coordinates[-2][in_concept][1],
+                                coordinates[-1][out_concept][0] - x_node_buffer,
+                                coordinates[-1][out_concept][1],
+                                color="k",
+                                alpha=1,
+                            )
+                            in_concept += 1
+                        for periodic_module in self.input_module.periodic_modules:
+                            arrow(
+                                ax,
+                                coordinates[-2][in_concept][0] + x_node_buffer,
+                                coordinates[-2][in_concept][1],
+                                coordinates[-1][out_concept][0] - x_node_buffer,
+                                coordinates[-1][out_concept][1],
+                                color="k",
+                                alpha=1,
+                            )
+                            in_concept += 1
+                    layer_width_idx += 1
+
+                # Target Outputs
+                current_x += 0.5 * x_step + x_node_buffer
+                if self.layers[-1].use_unobserved:
+                    current_x += x_indir_buffer
+                if layer_widths_with_spacing[-1] == max_layer_width_with_spacing:
                     current_y = height - y_heading - 0.5 * y_step
                 else:
-                    current_y = height - y_heading - 0.5 * y_step - y_step * ((max_layer_width_with_spacing - 1) / layer_widths_with_spacing[layer_width_idx]) / 2
+                    current_y = height - y_heading - 0.5 * y_step - y_step * ((max_layer_width_with_spacing - 1) / layer_widths_with_spacing[-1]) / 2
+                for idx in output_target_idcs:
+                    if is_single_rule:
+                        arrow(
+                            ax,
+                            coordinates[-1][0][0] + x_node_buffer + x_indir_buffer,
+                            coordinates[-1][0][1],
+                            current_x - 0.25 * x_step,
+                            current_y,
+                            color="k",
+                            alpha=1,
+                            use_arrow_head=True,
+                        )
+                        current_x += 0.25 * x_step
+                    text_fixed_size(ax, current_x, current_y, self.feature_names[idx])
+                    if layer_widths_with_spacing[-1] == max_layer_width_with_spacing:
+                        current_y -= y_step
+                    else:
+                        current_y -= y_step * (max_layer_width_with_spacing - 1) / layer_widths_with_spacing[-1]
+            else:
+
+                # Find maximum layer width
+                max_layer_width_with_spacing = self.layers[-1].nb_out_concepts
+
+                # Find output indices
+                output_target_idcs = list(range(len(self.feature_names)))
+                for idx in self.binary_indices:
+                    output_target_idcs.remove(idx)
+                for first_idx, last_idx in self.category_first_last_pairs:
+                    for idx in range(first_idx, last_idx + 1):
+                        output_target_idcs.remove(idx)
+                for idx, min_value, max_value in self.continuous_index_min_max_triples:
+                    output_target_idcs.remove(idx)
+                for idx, period in self.periodic_index_period_pairs:
+                    output_target_idcs.remove(idx)
+
+                # Define figure
+                if valid_raw_loss >= 0:
+                    y_heading = 1.5 * y_step
+                else:
+                    y_heading = 0
+                height = y_step * max_layer_width_with_spacing + y_heading + 1.05 * x_node_buffer
+                width = x_step * (0.5 + 0.5 + 0.5) + x_node_buffer
+                width += 0.25 * x_step
+                if self.layers[-1].use_unobserved:
+                    width += x_indir_buffer
+                if filename != "":
+                    plt.ion()
+                name = filename if filename != "" else "GNLN"
+                if fig_ax == -1:
+                    fig, ax = plt.subplots(
+                        1,
+                        1,
+                        num=name,
+                        gridspec_kw={"left": 0.0, "right": 1.0, "bottom": 0.0, "top": 1.0},
+                    )
+                else:
+                    fig, ax = fig_ax
+                fig.set_frameon(False)
+                ax.spines["top"].set_visible(False)
+                ax.spines["right"].set_visible(False)
+                ax.spines["bottom"].set_visible(False)
+                ax.spines["left"].set_visible(False)
+                dpi = fig.get_dpi()
+                fig.set_size_inches(width / dpi, height / dpi)
+                ax.set_ylim(0, height)
+                ax.set_xlim(0, width)
+                ax.set_aspect("equal")
+
+                # Losses
+                current_y = height - 0.5 * y_step
+                if valid_raw_loss >= 0:
+                    current_x = width * (2.2 / 5)
+                    text_fixed_size(
+                        ax,
+                        current_x,
+                        current_y,
+                        f"{valid_raw_loss:.3e}",
+                        h=12,
+                        align_left=True,
+                    )
+
+                current_x = 0.5 * x_step
+
+                # Fully-Connected Layers
+                i, layer = -1, self.layers[-1]
+
+                current_y = height - y_heading - 0.5 * y_step
                 for out_concept in range(layer.nb_out_concepts):
                     if layer.is_AND:
                         if layer.use_unobserved:
@@ -2863,116 +3066,16 @@ class NeuralLogicNetwork(nn.Module):
                             )
                         else:
                             OR_node(ax, current_x, current_y)
-                    coordinates[-1].append((current_x, current_y))
-                    if layer_widths_with_spacing[layer_width_idx] == max_layer_width_with_spacing:
-                        current_y -= y_step
-                    else:
-                        current_y -= y_step * (max_layer_width_with_spacing - 1) / layer_widths_with_spacing[layer_width_idx]
-                in_has_unobs = i > 0 and self.layers[i - 1].use_unobserved
-                if is_single_rule:
-                    max_bin_cat_idx = len(self.input_module.binary_indices) + sum([category_module.nb_out_concepts for category_module in self.input_module.category_modules])
-                for in_concept in range(layer.nb_in_concepts):
-                    if not is_single_rule or in_concept < max_bin_cat_idx:
-                        for out_concept in range(layer.nb_out_concepts):
-                            weight = layer.observed_concepts.data[out_concept, in_concept].item()
-                            if weight < 0:
-                                if in_has_unobs:
-                                    arrow(
-                                        ax,
-                                        coordinates[-2][in_concept][0] + x_node_buffer + x_unobs_buffer,
-                                        coordinates[-2][in_concept][1],
-                                        coordinates[-1][out_concept][0] - x_node_buffer,
-                                        coordinates[-1][out_concept][1],
-                                        color="r",
-                                        alpha=abs(weight),
-                                    )
-                                else:
-                                    arrow(
-                                        ax,
-                                        coordinates[-2][in_concept][0] + x_node_buffer,
-                                        coordinates[-2][in_concept][1],
-                                        coordinates[-1][out_concept][0] - x_node_buffer,
-                                        coordinates[-1][out_concept][1],
-                                        color="r",
-                                        alpha=abs(weight),
-                                    )
-                for in_concept in range(layer.nb_in_concepts):
-                    if not is_single_rule or in_concept < max_bin_cat_idx:
-                        for out_concept in range(layer.nb_out_concepts):
-                            weight = layer.observed_concepts.data[out_concept, in_concept].item()
-                            if weight > 0:
-                                if in_has_unobs:
-                                    arrow(
-                                        ax,
-                                        coordinates[-2][in_concept][0] + x_node_buffer + x_unobs_buffer,
-                                        coordinates[-2][in_concept][1],
-                                        coordinates[-1][out_concept][0] - x_node_buffer,
-                                        coordinates[-1][out_concept][1],
-                                        color="k",
-                                        alpha=weight,
-                                    )
-                                else:
-                                    arrow(
-                                        ax,
-                                        coordinates[-2][in_concept][0] + x_node_buffer,
-                                        coordinates[-2][in_concept][1],
-                                        coordinates[-1][out_concept][0] - x_node_buffer,
-                                        coordinates[-1][out_concept][1],
-                                        color="k",
-                                        alpha=weight,
-                                    )
-                if is_single_rule:
-                    in_concept = max_bin_cat_idx
-                    for continuous_module in self.input_module.continuous_modules:
-                        arrow(
-                            ax,
-                            coordinates[-2][in_concept][0] + x_node_buffer,
-                            coordinates[-2][in_concept][1],
-                            coordinates[-1][out_concept][0] - x_node_buffer,
-                            coordinates[-1][out_concept][1],
-                            color="k",
-                            alpha=1,
-                        )
-                        in_concept += 1
-                    for periodic_module in self.input_module.periodic_modules:
-                        arrow(
-                            ax,
-                            coordinates[-2][in_concept][0] + x_node_buffer,
-                            coordinates[-2][in_concept][1],
-                            coordinates[-1][out_concept][0] - x_node_buffer,
-                            coordinates[-1][out_concept][1],
-                            color="k",
-                            alpha=1,
-                        )
-                        in_concept += 1
-                layer_width_idx += 1
-
-            # Target Outputs
-            current_x += 0.5 * x_step + x_node_buffer
-            if self.layers[-1].use_unobserved:
-                current_x += x_unobs_buffer
-            if layer_widths_with_spacing[-1] == max_layer_width_with_spacing:
-                current_y = height - y_heading - 0.5 * y_step
-            else:
-                current_y = height - y_heading - 0.5 * y_step - y_step * ((max_layer_width_with_spacing - 1) / layer_widths_with_spacing[-1]) / 2
-            for idx in output_target_idcs:
-                if is_single_rule:
-                    arrow(
-                        ax,
-                        coordinates[-1][0][0] + x_node_buffer + x_unobs_buffer,
-                        coordinates[-1][0][1],
-                        current_x - 0.25 * x_step,
-                        current_y,
-                        color="k",
-                        alpha=1,
-                        use_arrow_head=True,
-                    )
-                    current_x += 0.25 * x_step
-                text_fixed_size(ax, current_x, current_y, self.feature_names[idx])
-                if layer_widths_with_spacing[-1] == max_layer_width_with_spacing:
                     current_y -= y_step
-                else:
-                    current_y -= y_step * (max_layer_width_with_spacing - 1) / layer_widths_with_spacing[-1]
+
+                # Target Outputs
+                current_x += 0.5 * x_step + x_node_buffer
+                if self.layers[-1].use_unobserved:
+                    current_x += x_indir_buffer
+                current_y = height - y_heading - 0.5 * y_step
+                for idx in output_target_idcs:
+                    text_fixed_size(ax, current_x, current_y, self.feature_names[idx])
+                    current_y -= y_step
 
             if fig_ax == -1:
                 if filename == "":
