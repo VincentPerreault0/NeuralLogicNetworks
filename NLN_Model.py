@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from torchmetrics.classification import BinaryROC
 from NLN_Dataset import NLNTabularDataset
 from NLN_Logging import close_log_files, get_log_files, print_log, gpu_mem_to_string, printProgressBar
-from NLN_Modules import NB_RULES, CATEGORY_CONCEPT_MULTIPLIER, NB_DICHOTOMIES_PER_CONTINUOUS, RANDOM_INIT_DIR, RANDOM_INIT_INDIR, VERBOSE, NeuralLogicNetwork
+from NLN_Modules import NB_RULES, CATEGORY_CONCEPT_MULTIPLIER, NB_DICHOTOMIES_PER_CONTINUOUS, RANDOM_INIT_OBS, RANDOM_INIT_UNOBS, VERBOSE, NeuralLogicNetwork
 
 MIN_NB_TRAINING_STEPS_BEFORE_REVIEW = 8
 
@@ -47,8 +47,8 @@ class NLN:
         nb_dichotomies_per_continuous: int = NB_DICHOTOMIES_PER_CONTINUOUS,
         nb_intervals_per_continuous: Union[int, None] = None,
         nb_out_concepts_per_continuous: Union[int, None] = None,
-        random_init_dir: bool = RANDOM_INIT_DIR,
-        random_init_indir: bool = RANDOM_INIT_INDIR,
+        random_init_obs: bool = RANDOM_INIT_OBS,
+        random_init_unobs: bool = RANDOM_INIT_UNOBS,
         device="cuda" if torch.cuda.is_available() else "cpu",
         verbose: bool = VERBOSE,
         do_log: bool = False,
@@ -105,8 +105,8 @@ class NLN:
             nb_dichotomies_per_continuous=nb_dichotomies_per_continuous,
             nb_intervals_per_continuous=nb_intervals_per_continuous,
             nb_out_concepts_per_continuous=nb_out_concepts_per_continuous,
-            random_init_dir=random_init_dir,
-            random_init_indir=random_init_indir,
+            random_init_obs=random_init_obs,
+            random_init_unobs=random_init_unobs,
             device=device,
             verbose=verbose,
             init_string=init_string,
@@ -355,6 +355,8 @@ class NLN:
             or self.do_plot_stats_test_dataset
         ):
             plt.close("all")
+
+        return NLN.load(self.filename)
 
     def _eval_train_val_loss(self):
         return self._validate(self.train_val_loader, override="raw")[0]

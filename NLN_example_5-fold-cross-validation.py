@@ -25,7 +25,7 @@ for fold_idx in range(5):
 
     model = NLN(f"{output_filename}_{fold_idx}", train_dataset, val_dataset=val_dataset, test_dataset=test_dataset)
 
-    model.learn()
+    model = model.learn()
 
     ## To retrieve the i-th model, use
     # model = NLN.load(f"{output_filename}_{i}")

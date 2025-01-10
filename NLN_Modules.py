@@ -21,8 +21,8 @@ USE_RULE_MODULE = True
 
 NB_RULES = 128
 
-RANDOM_INIT_DIR = True
-RANDOM_INIT_INDIR = True
+RANDOM_INIT_OBS = True
+RANDOM_INIT_UNOBS = True
 MONITOR_RESETS_REVIVES = True
 USE_RESETS = MONITOR_RESETS_REVIVES and True
 UNUSED_CONCEPT_THRESHOLD = 1e-5
@@ -43,8 +43,8 @@ class CombinationConcepts(nn.Module):
         nb_out_concepts: int,
         use_negation: bool = True,
         use_unobserved: bool = True,
-        random_init_dir: bool = RANDOM_INIT_DIR,
-        random_init_indir: bool = RANDOM_INIT_INDIR,
+        random_init_obs: bool = RANDOM_INIT_OBS,
+        random_init_unobs: bool = RANDOM_INIT_UNOBS,
         in_concepts_group_first_stop_pairs: List[Tuple[int, int]] = [],
         device="cuda" if torch.cuda.is_available() else "cpu",
         verbose: bool = VERBOSE,
@@ -57,18 +57,18 @@ class CombinationConcepts(nn.Module):
         else:
             self.junction_display_string = "OR"
             self.full_unobserved_value = 0
-        if not random_init_indir:
+        if not random_init_unobs:
             self.init_unobserved_value = self.full_unobserved_value
         self.nb_in_concepts = nb_in_concepts
         self.nb_out_concepts = nb_out_concepts
         self.use_negation = use_negation
         self.use_unobserved = use_unobserved
-        self.random_init_dir = random_init_dir
-        self.random_init_indir = random_init_indir
+        self.random_init_obs = random_init_obs
+        self.random_init_unobs = random_init_unobs
         self.in_concepts_group_first_stop_pairs = in_concepts_group_first_stop_pairs
         self.device = device
         self.verbose = verbose
-        if random_init_dir:
+        if random_init_obs:
             if use_negation:
                 self.observed_concepts = nn.Parameter(torch.Tensor(nb_out_concepts, nb_in_concepts).uniform_(-1, 1))
             else:
@@ -90,7 +90,7 @@ class CombinationConcepts(nn.Module):
                 if stop_in_concept_idx - first_in_concept_idx == self.nb_out_concepts:
                     self.observed_concepts.data[:, first_in_concept_idx:stop_in_concept_idx] = torch.eye(self.nb_out_concepts, device=self.device)
         if use_unobserved:
-            if random_init_indir:
+            if random_init_unobs:
                 self.unobserved_concepts = nn.Parameter(torch.Tensor(nb_out_concepts).uniform_(0, 1))
             else:
                 max_init_with_reset = 2 * nb_in_concepts if use_negation else nb_in_concepts
@@ -126,7 +126,7 @@ class CombinationConcepts(nn.Module):
             return self.next_pos_resets.pop(0), 1
 
     def reset_out_concept(self, out_concept):
-        if self.random_init_dir:
+        if self.random_init_obs:
             if self.use_negation:
                 self.observed_concepts.data[out_concept, :] = torch.Tensor(1, self.nb_in_concepts).uniform_(-1, 1)
             else:
@@ -143,7 +143,7 @@ class CombinationConcepts(nn.Module):
                 if stop_in_concept_idx - first_in_concept_idx == self.nb_out_concepts:
                     self.observed_concepts.data[:, first_in_concept_idx:stop_in_concept_idx] = torch.eye(self.nb_out_concepts, device=self.device)
         if self.use_unobserved:
-            if self.random_init_indir:
+            if self.random_init_unobs:
                 self.unobserved_concepts.data[out_concept] = torch.Tensor(1).uniform_(0, 1)
             else:
                 self.unobserved_concepts.data[out_concept] = self.init_unobserved_value
@@ -735,8 +735,8 @@ class AndConcepts(CombinationConcepts):
         nb_out_concepts: int,
         use_negation: bool = True,
         use_unobserved: bool = True,
-        random_init_dir: bool = RANDOM_INIT_DIR,
-        random_init_indir: bool = RANDOM_INIT_INDIR,
+        random_init_obs: bool = RANDOM_INIT_OBS,
+        random_init_unobs: bool = RANDOM_INIT_UNOBS,
         in_concepts_group_first_stop_pairs: List[Tuple[int, int]] = [],
         device="cuda" if torch.cuda.is_available() else "cpu",
         verbose: bool = VERBOSE,
@@ -747,8 +747,8 @@ class AndConcepts(CombinationConcepts):
             nb_out_concepts,
             use_negation=use_negation,
             use_unobserved=use_unobserved,
-            random_init_dir=random_init_dir,
-            random_init_indir=random_init_indir,
+            random_init_obs=random_init_obs,
+            random_init_unobs=random_init_unobs,
             in_concepts_group_first_stop_pairs=in_concepts_group_first_stop_pairs,
             device=device,
             verbose=verbose,
@@ -816,8 +816,8 @@ class OrConcepts(CombinationConcepts):
         nb_out_concepts: int,
         use_negation: bool = True,
         use_unobserved: bool = True,
-        random_init_dir: bool = RANDOM_INIT_DIR,
-        random_init_indir: bool = RANDOM_INIT_INDIR,
+        random_init_obs: bool = RANDOM_INIT_OBS,
+        random_init_unobs: bool = RANDOM_INIT_UNOBS,
         in_concepts_group_first_stop_pairs: List[Tuple[int, int]] = [],
         device="cuda" if torch.cuda.is_available() else "cpu",
         verbose: bool = VERBOSE,
@@ -828,8 +828,8 @@ class OrConcepts(CombinationConcepts):
             nb_out_concepts,
             use_negation=use_negation,
             use_unobserved=use_unobserved,
-            random_init_dir=random_init_dir,
-            random_init_indir=random_init_indir,
+            random_init_obs=random_init_obs,
+            random_init_unobs=random_init_unobs,
             in_concepts_group_first_stop_pairs=in_concepts_group_first_stop_pairs,
             device=device,
             verbose=verbose,
@@ -1072,7 +1072,7 @@ class ContinuousPreProcessingModule(nn.Module):
         min_value: float = 0,
         max_value: float = 1,
         period: float = 0,
-        random_init_dir: bool = RANDOM_INIT_DIR,
+        random_init_obs: bool = RANDOM_INIT_OBS,
         device="cuda" if torch.cuda.is_available() else "cpu",
         verbose: bool = VERBOSE,
     ):
@@ -1099,7 +1099,7 @@ class ContinuousPreProcessingModule(nn.Module):
             nb_intervals,
             use_negation=True,
             use_unobserved=False,
-            random_init_dir=random_init_dir,
+            random_init_obs=random_init_obs,
             device=device,
             verbose=verbose,
         )
@@ -1108,11 +1108,11 @@ class ContinuousPreProcessingModule(nn.Module):
             nb_out_concepts,
             use_negation=False,
             use_unobserved=False,
-            random_init_dir=True if USE_RULE_MODULE else random_init_dir,
+            random_init_obs=True if USE_RULE_MODULE else random_init_obs,
             device=device,
             verbose=verbose,
         )
-        if not random_init_dir:
+        if not random_init_obs:
             if nb_intervals >= nb_dichotomies + 1:
                 minus_eye = torch.cat(
                     (
@@ -1336,7 +1336,7 @@ class NLNPreProcessingModules(nn.Module):
                     category_nb_out_concepts,
                     use_negation=False,
                     use_unobserved=False,
-                    random_init_dir=True if USE_RULE_MODULE else False,
+                    random_init_obs=True if USE_RULE_MODULE else False,
                     device=device,
                     verbose=verbose,
                 )
@@ -1356,7 +1356,7 @@ class NLNPreProcessingModules(nn.Module):
                     nb_out_concepts_per_continuous,
                     min_value=min_value,
                     max_value=max_value,
-                    random_init_dir=False,
+                    random_init_obs=False,
                     device=device,
                     verbose=verbose,
                 )
@@ -1374,7 +1374,7 @@ class NLNPreProcessingModules(nn.Module):
                     nb_intervals_per_continuous,
                     nb_out_concepts_per_continuous,
                     period=period,
-                    random_init_dir=False,
+                    random_init_obs=False,
                     device=device,
                     verbose=verbose,
                 )
@@ -2035,8 +2035,8 @@ class NeuralLogicNetwork(nn.Module):
         nb_dichotomies_per_continuous: int = NB_DICHOTOMIES_PER_CONTINUOUS,
         nb_intervals_per_continuous: Union[int, None] = None,
         nb_out_concepts_per_continuous: Union[int, None] = None,
-        random_init_dir: bool = RANDOM_INIT_DIR,
-        random_init_indir: bool = RANDOM_INIT_INDIR,
+        random_init_obs: bool = RANDOM_INIT_OBS,
+        random_init_unobs: bool = RANDOM_INIT_UNOBS,
         device="cuda" if torch.cuda.is_available() else "cpu",
         verbose: bool = VERBOSE,
         init_string="",
@@ -2079,8 +2079,8 @@ class NeuralLogicNetwork(nn.Module):
                         nb_concepts_per_hidden_layer,
                         use_negation=True,
                         use_unobserved=True,
-                        random_init_dir=random_init_dir,
-                        random_init_indir=random_init_indir,
+                        random_init_obs=random_init_obs,
+                        random_init_unobs=random_init_unobs,
                         in_concepts_group_first_stop_pairs=in_concepts_group_first_stop_pairs,
                         device=device,
                         verbose=verbose,
@@ -2093,8 +2093,8 @@ class NeuralLogicNetwork(nn.Module):
                         nb_concepts_per_hidden_layer,
                         use_negation=True,
                         use_unobserved=True,
-                        random_init_dir=random_init_dir,
-                        random_init_indir=random_init_indir,
+                        random_init_obs=random_init_obs,
+                        random_init_unobs=random_init_unobs,
                         device=device,
                         verbose=verbose,
                     )
@@ -2107,8 +2107,8 @@ class NeuralLogicNetwork(nn.Module):
                         nb_out_concepts,
                         use_negation=False,
                         use_unobserved=True,
-                        random_init_dir=random_init_dir,
-                        random_init_indir=random_init_indir,
+                        random_init_obs=random_init_obs,
+                        random_init_unobs=random_init_unobs,
                         device=device,
                         verbose=verbose,
                     )
@@ -2120,8 +2120,8 @@ class NeuralLogicNetwork(nn.Module):
                         nb_out_concepts,
                         use_negation=False,
                         use_unobserved=True,
-                        random_init_dir=random_init_dir,
-                        random_init_indir=random_init_indir,
+                        random_init_obs=random_init_obs,
+                        random_init_unobs=random_init_unobs,
                         device=device,
                         verbose=verbose,
                     )
@@ -2134,8 +2134,8 @@ class NeuralLogicNetwork(nn.Module):
                         nb_out_concepts,
                         use_negation=True,
                         use_unobserved=True,
-                        random_init_dir=random_init_dir,
-                        random_init_indir=random_init_indir,
+                        random_init_obs=random_init_obs,
+                        random_init_unobs=random_init_unobs,
                         device=device,
                         verbose=verbose,
                     )
@@ -2147,8 +2147,8 @@ class NeuralLogicNetwork(nn.Module):
                         nb_out_concepts,
                         use_negation=True,
                         use_unobserved=True,
-                        random_init_dir=random_init_dir,
-                        random_init_indir=random_init_indir,
+                        random_init_obs=random_init_obs,
+                        random_init_unobs=random_init_unobs,
                         device=device,
                         verbose=verbose,
                     )
@@ -2429,7 +2429,7 @@ class NeuralLogicNetwork(nn.Module):
             x_step = 120
             y_step = 26
             x_node_buffer = 15
-            x_indir_buffer = 10
+            x_unobs_buffer = 10
             y_text_line = 12 * 1.25
 
             # Find maximum layer width
@@ -2511,7 +2511,7 @@ class NeuralLogicNetwork(nn.Module):
             if is_single_rule:
                 width += 0.25 * x_step
             if self.layers[-1].use_unobserved:
-                width += x_indir_buffer
+                width += x_unobs_buffer
             if filename != "":
                 plt.ion()
             name = filename if filename != "" else "GNLN"
@@ -2868,7 +2868,7 @@ class NeuralLogicNetwork(nn.Module):
                         current_y -= y_step
                     else:
                         current_y -= y_step * (max_layer_width_with_spacing - 1) / layer_widths_with_spacing[layer_width_idx]
-                in_has_indir = i > 0 and self.layers[i - 1].use_unobserved
+                in_has_unobs = i > 0 and self.layers[i - 1].use_unobserved
                 if is_single_rule:
                     max_bin_cat_idx = len(self.input_module.binary_indices) + sum([category_module.nb_out_concepts for category_module in self.input_module.category_modules])
                 for in_concept in range(layer.nb_in_concepts):
@@ -2876,10 +2876,10 @@ class NeuralLogicNetwork(nn.Module):
                         for out_concept in range(layer.nb_out_concepts):
                             weight = layer.observed_concepts.data[out_concept, in_concept].item()
                             if weight < 0:
-                                if in_has_indir:
+                                if in_has_unobs:
                                     arrow(
                                         ax,
-                                        coordinates[-2][in_concept][0] + x_node_buffer + x_indir_buffer,
+                                        coordinates[-2][in_concept][0] + x_node_buffer + x_unobs_buffer,
                                         coordinates[-2][in_concept][1],
                                         coordinates[-1][out_concept][0] - x_node_buffer,
                                         coordinates[-1][out_concept][1],
@@ -2901,10 +2901,10 @@ class NeuralLogicNetwork(nn.Module):
                         for out_concept in range(layer.nb_out_concepts):
                             weight = layer.observed_concepts.data[out_concept, in_concept].item()
                             if weight > 0:
-                                if in_has_indir:
+                                if in_has_unobs:
                                     arrow(
                                         ax,
-                                        coordinates[-2][in_concept][0] + x_node_buffer + x_indir_buffer,
+                                        coordinates[-2][in_concept][0] + x_node_buffer + x_unobs_buffer,
                                         coordinates[-2][in_concept][1],
                                         coordinates[-1][out_concept][0] - x_node_buffer,
                                         coordinates[-1][out_concept][1],
@@ -2950,7 +2950,7 @@ class NeuralLogicNetwork(nn.Module):
             # Target Outputs
             current_x += 0.5 * x_step + x_node_buffer
             if self.layers[-1].use_unobserved:
-                current_x += x_indir_buffer
+                current_x += x_unobs_buffer
             if layer_widths_with_spacing[-1] == max_layer_width_with_spacing:
                 current_y = height - y_heading - 0.5 * y_step
             else:
@@ -2959,7 +2959,7 @@ class NeuralLogicNetwork(nn.Module):
                 if is_single_rule:
                     arrow(
                         ax,
-                        coordinates[-1][0][0] + x_node_buffer + x_indir_buffer,
+                        coordinates[-1][0][0] + x_node_buffer + x_unobs_buffer,
                         coordinates[-1][0][1],
                         current_x - 0.25 * x_step,
                         current_y,

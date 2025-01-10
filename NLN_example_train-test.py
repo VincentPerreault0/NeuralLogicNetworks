@@ -12,7 +12,7 @@ test_dataset = NLNTabularDataset(test_dataset_filename)
 
 model = NLN(output_filename, train_dataset, test_dataset=test_dataset)
 
-model.learn()
+model = model.learn()
 
 model.show()
 
