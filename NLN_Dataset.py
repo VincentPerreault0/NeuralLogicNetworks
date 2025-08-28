@@ -191,7 +191,7 @@ class NLNTabularDataset(Dataset):
 
             is_string_category = isinstance(values[0], str)
             is_0_1 = set(values) == {0, 1}
-            has_missing_values = df[var].isnull().any() or "?" in values
+            has_missing_values = bool(df[var].isnull().any()) or "?" in values
 
             has_missing_values_dict[var] = has_missing_values
 
