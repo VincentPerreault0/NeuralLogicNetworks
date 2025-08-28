@@ -41,6 +41,7 @@ for fold_idx in range(5):
         test_all_correct_acc_values.append(model.test_all_correct_acc)
 
 summary_files = get_log_files(output_filename + "_SUMMARY", True)
+print("")
 print_log("SUMMARY\n-------\n", True, summary_files)
 print_log(f"FULL MSE:         {mean(full_loss_values):#.4g}", True, summary_files)
 print_log(f"FULL ACCURACY:    {mean(full_acc_values):#.4g}", True, summary_files)
