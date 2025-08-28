@@ -39,7 +39,8 @@ $ pip install torch --index-url https://download.pytorch.org/whl/cu118
 Follow the example codes depending on your situation:
 - `NLN_example_train.py` if you only have a training dataset file (including validation) on which to learn a NLN;
 - `NLN_example_train-test.py` if you have both a training dataset file (including validation) to learn a NLN and a test dataset file to test it;
-- `NLN_example_5-fold-cross-validation.py` if you wish to train, test and cross-validate on the same dataset file.
+- `NLN_example_5-fold-cross-validation.py` if you wish to train, test and cross-validate on the same dataset file;
+- `NLN_example_merge.py` if you wish to merge multiple learned models (for instance, after 5-fold cross-validation).
 
 The first time any `.csv` dataset file is used, prompts in the terminal will guide you to determine the types of your features (binary, categorical or continuous/ordinal) as well as which column(s) should be the target(s) for classification (binary or categorical). If reformatting of the `.csv` file iteself is required, a copy will be created.
 
