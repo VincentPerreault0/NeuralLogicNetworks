@@ -734,9 +734,8 @@ class CombinationConcepts(nn.Module):
                         if not out_i in already_duplicates:
                             duplicate_list = [out_i]
                             for out_j in range(out_i + 1, self.nb_out_concepts):
-                                if torch.equal(
-                                    self.observed_concepts.data[out_i, :],
-                                    self.observed_concepts.data[out_j, :],
+                                if torch.equal(self.observed_concepts.data[out_i, :], self.observed_concepts.data[out_j, :]) and (
+                                    not self.use_missing_values or torch.equal(self.missing_observed_concepts.data[out_i], self.missing_observed_concepts.data[out_j])
                                 ):
                                     duplicate_list.append(out_j)
                                     already_duplicates.append(out_j)
