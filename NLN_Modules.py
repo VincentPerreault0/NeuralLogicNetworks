@@ -651,6 +651,9 @@ class CombinationConcepts(nn.Module):
                 used_out_concepts = [used_out_concept for used_out_concept in used_out_concepts if self.unobserved_concepts.data[used_out_concept] > 0]
             else:
                 used_out_concepts = [used_out_concept for used_out_concept in used_out_concepts if not used_out_concept in extra_unused_out_concepts]
+            if self.use_missing_values:
+                used_missing_out_concepts = torch.nonzero(self.missing_observed_concepts.data).view(-1).tolist()
+                used_out_concepts = sorted(list(set(used_out_concepts) | set(used_missing_out_concepts)))
         else:
             self.nb_in_concepts = 1
             if keep_all_out_concepts:
