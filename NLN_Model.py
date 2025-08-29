@@ -25,6 +25,7 @@ from NLN_Modules import (
     TRAIN_FORW_WEIGHT_QUANT,
     APPROX_PARAMS,
     VERBOSE,
+    DEVICE,
     NeuralLogicNetwork,
 )
 
@@ -73,7 +74,7 @@ class NLN:
         random_init_unobs: bool = RANDOM_INIT_UNOBS,
         empty_init_targets: bool = EMPTY_INIT_TARGETS,
         empty_reset_in_concepts: bool = EMPTY_RESET_IN_CONCEPTS,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=DEVICE,
         verbose: bool = VERBOSE,
         do_log: bool = False,
         do_save_intermediate_learning_model_plots: bool = False,

@@ -18,6 +18,8 @@ from NLN_Logging import get_log_files, close_log_files, print_log
 
 VERBOSE = False
 
+DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+
 NB_RULES = 128
 
 TRAIN_FORW_WEIGHT_QUANT = ""
@@ -125,7 +127,7 @@ class CombinationConcepts(nn.Module):
         train_forw_weight_quant: str = TRAIN_FORW_WEIGHT_QUANT,
         approx_AND_OR_params: Union[None, Tuple[float, float, float]] = APPROX_PARAMS,
         in_concepts_group_first_stop_pairs: List[Tuple[int, int]] = [],
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=DEVICE,
         verbose: bool = VERBOSE,
     ):
         super().__init__()
@@ -1137,7 +1139,7 @@ class AndConcepts(CombinationConcepts):
         train_forw_weight_quant: str = TRAIN_FORW_WEIGHT_QUANT,
         approx_AND_OR_params: Union[None, Tuple[float, float, float]] = APPROX_PARAMS,
         in_concepts_group_first_stop_pairs: List[Tuple[int, int]] = [],
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=DEVICE,
         verbose: bool = VERBOSE,
     ):
         super().__init__(
@@ -1231,7 +1233,7 @@ class OrConcepts(CombinationConcepts):
         train_forw_weight_quant: str = TRAIN_FORW_WEIGHT_QUANT,
         approx_AND_OR_params: Union[None, Tuple[float, float, float]] = APPROX_PARAMS,
         in_concepts_group_first_stop_pairs: List[Tuple[int, int]] = [],
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=DEVICE,
         verbose: bool = VERBOSE,
     ):
         super().__init__(
@@ -1317,7 +1319,7 @@ class Dichotomies(nn.Module):
         nb_dichotomies: int,
         min_value: float,
         max_value: float,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=DEVICE,
     ):
         super().__init__()
         self.device = device
@@ -1394,7 +1396,7 @@ class PeriodicDichotomies(nn.Module):
         self,
         nb_dichotomies: int,
         period: float,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=DEVICE,
     ):
         super().__init__()
         self.device = device
@@ -1494,7 +1496,7 @@ class ContinuousPreProcessingModule(nn.Module):
         empty_reset_in_concepts: bool = EMPTY_RESET_IN_CONCEPTS,
         train_forw_weight_quant: str = TRAIN_FORW_WEIGHT_QUANT,
         approx_AND_OR_params: Union[None, Tuple[float, float, float]] = APPROX_PARAMS,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=DEVICE,
         verbose: bool = VERBOSE,
     ):
         super().__init__()
@@ -1739,7 +1741,7 @@ class NLNPreProcessingModules(nn.Module):
         nb_out_concepts_per_continuous: int = -1,
         random_init_obs: bool = RANDOM_INIT_OBS,
         empty_reset_in_concepts: bool = EMPTY_RESET_IN_CONCEPTS,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=DEVICE,
         verbose: bool = VERBOSE,
     ):
         super().__init__()
@@ -1885,7 +1887,7 @@ class NLNPreProcessingModules(nn.Module):
         nb_out_concepts_per_continuous: int = -1,
         random_init_obs: bool = RANDOM_INIT_OBS,
         empty_reset_in_concepts: bool = EMPTY_RESET_IN_CONCEPTS,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=DEVICE,
         verbose: bool = VERBOSE,
     ):
         if len(set([module.nb_in_concepts for module in modules])) > 1:
@@ -2832,7 +2834,7 @@ class NeuralLogicNetwork(nn.Module):
         random_init_unobs: bool = RANDOM_INIT_UNOBS,
         empty_init_targets: bool = EMPTY_INIT_TARGETS,
         empty_reset_in_concepts: bool = EMPTY_RESET_IN_CONCEPTS,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=DEVICE,
         verbose: bool = VERBOSE,
         init_string="",
     ):
