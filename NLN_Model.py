@@ -1202,7 +1202,7 @@ class NLN:
         start = time.time()
 
         for source, target in dataloader:
-            source, target = source.to(self.torch_module.device).to(torch.float32), target.to(self.torch_module.device).to(torch.float32)
+            source, target = source.to(torch.float32).to(self.torch_module.device), target.to(torch.float32).to(self.torch_module.device)
 
             optimizer.zero_grad()
 
@@ -1243,7 +1243,7 @@ class NLN:
         dataloaders = [dataloader] if extra_dataloader == None else [dataloader, extra_dataloader]
         for curr_dataloader in dataloaders:
             for source, target in curr_dataloader:
-                source, target = source.to(self.torch_module.device).to(torch.float32), target.to(self.torch_module.device).to(torch.float32)
+                source, target = source.to(torch.float32).to(self.torch_module.device), target.to(torch.float32).to(self.torch_module.device)
 
                 output = self.torch_module(source)
                 output = output.view(-1)
@@ -1385,7 +1385,7 @@ class NLN:
         dataloaders = [dataloader] if extra_dataloader == None else [dataloader, extra_dataloader]
         for curr_dataloader in dataloaders:
             for source, target in curr_dataloader:
-                source, target = source.to(self.torch_module.device).to(torch.float32), target.to(self.torch_module.device).to(torch.float32)
+                source, target = source.to(torch.float32).to(self.torch_module.device), target.to(torch.float32).to(self.torch_module.device)
 
                 output = self.torch_module(source)
                 if not multi_label:
@@ -1424,7 +1424,7 @@ class NLN:
         dataloaders = [dataloader] if extra_dataloader == None else [dataloader, extra_dataloader]
         for curr_dataloader in dataloaders:
             for source, target in curr_dataloader:
-                source, target = source.to(self.torch_module.device).to(torch.float32), target.to(self.torch_module.device).to(torch.float32)
+                source, target = source.to(torch.float32).to(self.torch_module.device), target.to(torch.float32).to(self.torch_module.device)
 
                 output = self.torch_module(source)
                 output = output.view(target.shape)
@@ -1731,7 +1731,7 @@ class NLN:
         self.torch_module.eval()
         for dataloader in dataloaders:
             for source, target in dataloader:
-                source, target = source.to(self.torch_module.device).to(torch.float32), target.to(self.torch_module.device).to(torch.float32)
+                source, target = source.to(torch.float32).to(self.torch_module.device), target.to(torch.float32).to(self.torch_module.device)
 
                 cumul_presences[-1, -1] += source.size(0)
                 if not is_multi_label:
@@ -2121,7 +2121,7 @@ class NLN:
         other_NLN.torch_module.eval()
         for dataloader in dataloaders:
             for source, target in dataloader:
-                source, target = source.to(self.torch_module.device).to(torch.float32), target.to(self.torch_module.device).to(torch.float32)
+                source, target = source.to(torch.float32).to(self.torch_module.device), target.to(torch.float32).to(self.torch_module.device)
 
                 tmp = self.torch_module.input_module(source)
                 rule_outputs_i = self.torch_module.layers[:-1](tmp)
