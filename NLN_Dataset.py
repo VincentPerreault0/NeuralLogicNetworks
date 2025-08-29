@@ -249,7 +249,7 @@ class NLNTabularDataset(Dataset):
 
             # print_df(df, column_values=True)
 
-            df = pd.get_dummies(df)  # one-hot encoding
+            df = pd.get_dummies(df, dtype=int)  # one-hot encoding
 
             one_hot_all_vars = [column for column in df.columns if column not in two_value_category_values_to_remove]
             one_hot_vars = 1 * one_hot_all_vars
