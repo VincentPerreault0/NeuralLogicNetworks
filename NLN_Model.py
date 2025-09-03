@@ -209,7 +209,7 @@ class NLN:
         has_retrained_dichotomies=None,
         has_retrained_unobserved_concepts=None,
         has_pruned=None,
-        has_self_analyzed_and_updated=None,
+        has_analyzed_dataset_coverage_and_adjusted_biases=None,
         has_reordered=None,
         has_saved_final_plots=None,
         has_evaluated_and_or_plotted_stats=None,
@@ -324,7 +324,7 @@ class NLN:
             has_pruned = False
         if do_analyze_dataset_coverage_and_adjust_biases != None and do_analyze_dataset_coverage_and_adjust_biases != self.do_analyze_dataset_coverage_and_adjust_biases:
             self.do_analyze_dataset_coverage_and_adjust_biases = do_analyze_dataset_coverage_and_adjust_biases
-            has_self_analyzed_and_updated = False
+            has_analyzed_dataset_coverage_and_adjusted_biases = False
         if do_reorder != None and do_reorder != self.do_reorder:
             self.do_reorder = do_reorder
             has_reordered = False
@@ -369,7 +369,7 @@ class NLN:
             has_discretized = False
 
         if (
-            self.train_dataset.nb_features != self.torch_module.nb_in_concepts
+            self.train_dataset.nb_features != self.torch_module.nb_in_features
             or self.train_dataset.nb_class_targets != self.torch_module.nb_out_concepts
             or [(first_idx, last_idx, has_missing_values) for first_idx, last_idx, has_missing_values in self.train_dataset.category_first_last_has_missing_values_tuples]
             != self.torch_module.category_first_last_has_missing_values_tuples
@@ -457,10 +457,10 @@ class NLN:
         if has_pruned != None:
             self.has_pruned = has_pruned
             if not has_pruned:
-                has_self_analyzed_and_updated = False
-        if has_self_analyzed_and_updated != None:
-            self.has_analyzed_dataset_coverage_and_adjusted_biases = has_self_analyzed_and_updated
-            if not has_self_analyzed_and_updated:
+                has_analyzed_dataset_coverage_and_adjusted_biases = False
+        if has_analyzed_dataset_coverage_and_adjusted_biases != None:
+            self.has_analyzed_dataset_coverage_and_adjusted_biases = has_analyzed_dataset_coverage_and_adjusted_biases
+            if not has_analyzed_dataset_coverage_and_adjusted_biases:
                 has_reordered = False
         if has_reordered != None:
             self.has_reordered = has_reordered
@@ -583,9 +583,11 @@ class NLN:
                 if not self.has_trained:
                     if self.verbose:
                         print(f"\nInitial training...")
+                        progress_bar_hook = lambda iteration, nb_iterations: None
                     else:
                         print()
                         printProgressBar(0, self.train_nb_epochs, prefix=f"Initial training...  ", suffix="", length=50)
+                        progress_bar_hook = lambda iteration, nb_iterations: printProgressBar(iteration, nb_iterations, prefix=f"Initial training...  ", suffix="", length=50)
                     full_optimizer = torch.optim.Adam(self.torch_module.parameters(), lr=self.adam_lr)
                     start = time.time()
                     self.train_results = self._train(
@@ -595,6 +597,7 @@ class NLN:
                         filename=filename,
                         use_best_val=True,  # False,
                         max_nb_epochs_since_last_best=500,
+                        progress_bar_hook=progress_bar_hook,
                         save_model_plots=self.do_save_intermediate_training_model_plots,
                         show_loss_epochs=self.do_save_training_progression_plots,
                         show_loss_time=self.do_save_training_progression_plots,
@@ -669,9 +672,13 @@ class NLN:
                     if not self.has_retrained_continuous_together:
                         if self.verbose:
                             print(f"\nContinuous parameters retraining...")
+                            progress_bar_hook = lambda iteration, nb_iterations: None
                         else:
                             print()
                             printProgressBar(0, self.retrain_nb_epochs, prefix=f"Continuous parameters retraining...  ", suffix="", length=50)
+                            progress_bar_hook = lambda iteration, nb_iterations: printProgressBar(
+                                iteration, nb_iterations, prefix=f"Continuous parameters retraining...  ", suffix="", length=50
+                            )
 
                         if self.do_train or self.do_discretize:
                             self = NLN.load(self.filename)
@@ -685,6 +692,7 @@ class NLN:
                             filename=filename,
                             use_best_val=True,
                             max_nb_epochs_since_last_best=100,
+                            progress_bar_hook=progress_bar_hook,
                             save_model_plots=False,
                             show_loss_epochs=self.do_save_training_progression_plots,
                         )
@@ -704,9 +712,13 @@ class NLN:
                     if not self.has_retrained_dichotomies:
                         if self.verbose:
                             print(f"\nDichotomies retraining...")
+                            progress_bar_hook = lambda iteration, nb_iterations: None
                         else:
                             print()
                             printProgressBar(0, self.retrain_nb_epochs, prefix=f"Dichotomies retraining...  ", suffix="", length=50)
+                            progress_bar_hook = lambda iteration, nb_iterations: printProgressBar(
+                                iteration, nb_iterations, prefix=f"Dichotomies retraining...  ", suffix="", length=50
+                            )
 
                         if self.do_train or self.do_discretize:
                             self = NLN.load(self.filename)
@@ -720,6 +732,7 @@ class NLN:
                             filename=filename,
                             use_best_val=True,
                             max_nb_epochs_since_last_best=100,
+                            progress_bar_hook=progress_bar_hook,
                             save_model_plots=False,
                             show_loss_epochs=self.do_save_training_progression_plots,
                         )
@@ -738,10 +751,14 @@ class NLN:
                     filename += "_unobsRetrained"
                     if not self.has_retrained_unobserved_concepts:
                         if self.verbose:
-                            print(f"\nUnobserved concepts retraining...")
+                            print(f"\nUnobserved and missing retraining...")
+                            progress_bar_hook = lambda iteration, nb_iterations: None
                         else:
                             print()
-                            printProgressBar(0, self.retrain_nb_epochs, prefix=f"Unobserved concepts retraining...  ", suffix="", length=50)
+                            printProgressBar(0, self.retrain_nb_epochs, prefix=f"Unobserved and missing retraining...  ", suffix="", length=50)
+                            progress_bar_hook = lambda iteration, nb_iterations: printProgressBar(
+                                iteration, nb_iterations, prefix=f"Unobserved and missing retraining...  ", suffix="", length=50
+                            )
 
                         if self.do_train or self.do_discretize or self.do_retrain_dichotomies:
                             self = NLN.load(self.filename)
@@ -755,6 +772,7 @@ class NLN:
                             filename=filename,
                             use_best_val=True,
                             max_nb_epochs_since_last_best=100,
+                            progress_bar_hook=progress_bar_hook,
                             save_model_plots=False,
                             show_loss_epochs=self.do_save_training_progression_plots,
                         )
@@ -943,6 +961,7 @@ class NLN:
         filename="",
         use_best_val=True,
         max_nb_epochs_since_last_best=500,
+        progress_bar_hook=lambda iteration, nb_iterations: None,
         save_model_plots=True,
         show_loss_epochs=True,
         show_loss_time=False,
@@ -1044,10 +1063,7 @@ class NLN:
                 print_log(model_string, False, files=log_files)
 
             if not self.verbose:
-                if do_train_weights:
-                    printProgressBar(epoch, self.train_nb_epochs, prefix=f"Initial training...  ", suffix="", length=50)
-                else:
-                    printProgressBar(epoch, self.retrain_nb_epochs, prefix=f"Continuous parameters retraining...  ", suffix="", length=50)
+                progress_bar_hook(epoch, nb_epochs)
 
             if len(filename) > 0 and save_model_plots and (epoch < 10 or (epoch < 100 and epoch % 10 == 0) or epoch % 100 == 0):
                 start = time.time()
@@ -1077,10 +1093,7 @@ class NLN:
 
             if (use_best_val and epoch - best_raw_epoch == max_nb_epochs_since_last_best) or valid_raw_loss == 0.0:
                 if not self.verbose:
-                    if do_train_weights:
-                        printProgressBar(self.train_nb_epochs, self.train_nb_epochs, prefix=f"Initial training...  ", suffix="", length=50)
-                    else:
-                        printProgressBar(self.retrain_nb_epochs, self.retrain_nb_epochs, prefix=f"Continuous parameters retraining...  ", suffix="", length=50)
+                    progress_bar_hook(nb_epochs, nb_epochs)
                 break
 
         actual_nb_epochs = len(results["train_no_reg_losses"]) - 1
@@ -1905,7 +1918,7 @@ class NLN:
 
     def show_inter_analysis(self, other_NLN):
         uncomparable = not (
-            self.torch_module.nb_in_concepts == other_NLN.torch_module.nb_in_concepts
+            self.torch_module.nb_in_features == other_NLN.torch_module.nb_in_concepts
             and self.torch_module.nb_out_concepts == other_NLN.torch_module.nb_out_concepts
             and self.torch_module.feature_names == other_NLN.torch_module.feature_names
             and self.torch_module.category_first_last_has_missing_values_tuples == other_NLN.torch_module.category_first_last_has_missing_values_tuples

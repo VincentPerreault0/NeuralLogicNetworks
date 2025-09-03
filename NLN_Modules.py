@@ -172,6 +172,8 @@ class CombinationConcepts(nn.Module):
             if use_missing_values:
                 self.missing_observed_concepts = nn.Parameter(torch.zeros(nb_out_concepts))
         self.observed_concepts.data = self.observed_concepts.data.to(device)
+        if use_missing_values:
+            self.missing_observed_concepts.data = self.missing_observed_concepts.data.to(device)
         if self.is_grouped:
             self.observed_grouped_concepts = nn.Parameter(torch.ones(nb_out_concepts, len(self.in_concepts_group_first_stop_pairs)))
             self.observed_grouped_concepts.data = self.observed_grouped_concepts.data.to(device)
@@ -202,6 +204,13 @@ class CombinationConcepts(nn.Module):
             self.verbose = verbose
         if device != None and device != self.device:
             self.device = device
+            self.observed_concepts.data = self.observed_concepts.data.to(device)
+            if self.use_missing_values:
+                self.missing_observed_concepts.data = self.missing_observed_concepts.data.to(device)
+            if self.is_grouped:
+                self.observed_grouped_concepts.data = self.observed_grouped_concepts.data.to(device)
+            if self.use_unobserved:
+                self.unobserved_concepts.data = self.unobserved_concepts.data.to(device)
             self.to(device)
 
     def _get_in_concept_from_out_concept_in_group(self, out_concept, in_group):
@@ -420,10 +429,6 @@ class CombinationConcepts(nn.Module):
             if self.is_grouped:
                 observed_grouped_concepts = self.observed_grouped_concepts
 
-        if len(x.shape) > 1 or self.nb_in_concepts > 1:
-            x_shape_prefix = list(x.shape[0:-1])
-        else:
-            x_shape_prefix = [x.shape[0]]
         x = x.view(-1, self.nb_in_concepts)
         if not self.is_grouped:
             if self.approx_AND_OR_params == None or not self.training:
@@ -469,7 +474,7 @@ class CombinationConcepts(nn.Module):
 
         result = self.combine_with_unobserved_concepts(result)
 
-        return result.view(x_shape_prefix + [self.nb_out_concepts])
+        return result
 
     def add_regularization(self, loss):
         if self.use_negation:
@@ -1332,14 +1337,24 @@ class Dichotomies(nn.Module):
         self.sharpnesses.data = self.sharpnesses.data.to(device)
         self.to(device)
 
+    def set(
+        self,
+        device=None,
+    ):
+        if device != None and device != self.device:
+            self.device = device
+            self.boundaries.data = self.boundaries.data.to(device)
+            self.sharpnesses.data = self.sharpnesses.data.to(device)
+            self.to(device)
+
     def update_parameters(self):
         self.sharpnesses.data.clamp_(min=1e-5)
 
     def forward(self, x):
         """Forward pass"""
-        x_v = x.view(list(x.shape) + [1])
-        boundaries_v = self.boundaries.view(len(x.shape) * [1] + [self.nb_dichotomies])
-        sharpnesses_v = self.sharpnesses.view(len(x.shape) * [1] + [self.nb_dichotomies])
+        x_v = x.view(-1, 1)
+        boundaries_v = self.boundaries.view(1, self.nb_dichotomies)
+        sharpnesses_v = self.sharpnesses.view(1, self.nb_dichotomies)
         result = F.sigmoid(sharpnesses_v * (x_v - boundaries_v))
         return result
 
@@ -1410,6 +1425,16 @@ class PeriodicDichotomies(nn.Module):
         self.sharpnesses.data = self.sharpnesses.data.to(device)
         self.to(device)
 
+    def set(
+        self,
+        device=None,
+    ):
+        if device != None and device != self.device:
+            self.device = device
+            self.centers.data = self.centers.data.to(device)
+            self.sharpnesses.data = self.sharpnesses.data.to(device)
+            self.to(device)
+
     def update_parameters(self):
         self.centers.data[self.centers.data < 0] += self.period
         self.centers.data[self.centers.data > self.period] -= self.period
@@ -1417,9 +1442,9 @@ class PeriodicDichotomies(nn.Module):
 
     def forward(self, x):
         """Forward pass"""
-        x_v = x.view(list(x.shape) + [1])
-        centers_v = self.centers.view(len(x.shape) * [1] + [self.nb_dichotomies])
-        sharpnesses_v = self.sharpnesses.view(len(x.shape) * [1] + [self.nb_dichotomies])
+        x_v = x.view(-1, 1)
+        centers_v = self.centers.view(1, self.nb_dichotomies)
+        sharpnesses_v = self.sharpnesses.view(1, self.nb_dichotomies)
         ls_v = centers_v - 0.25 * self.period
         ls_v[ls_v < 0] += self.period
         us_v = centers_v + 0.25 * self.period
@@ -1556,6 +1581,7 @@ class ContinuousPreProcessingModule(nn.Module):
         device=None,
         verbose=None,
     ):
+        self.dichotomies.set(device=device)
         self.intervals.set(
             empty_reset_in_concepts=empty_reset_in_concepts,
             train_forw_weight_quant=train_forw_weight_quant,
@@ -1570,11 +1596,6 @@ class ContinuousPreProcessingModule(nn.Module):
             device=device,
             verbose=verbose,
         )
-        if device != None and device != self.device:
-            self.dichotomies.device = device
-            self.dichotomies.to(device)
-            self.device = device
-            self.to(device)
 
     def reset_out_concept(self, out_concept):
         self.out_concepts.reset_out_concept(out_concept)
@@ -1728,7 +1749,7 @@ class NLNPreProcessingModules(nn.Module):
 
     def __init__(
         self,
-        nb_in_concepts: int,
+        nb_in_features: int,
         train_forw_weight_quant: str = TRAIN_FORW_WEIGHT_QUANT,
         approx_AND_OR_params: Union[None, Tuple[float, float, float]] = APPROX_PARAMS,
         category_first_last_has_missing_values_tuples: List[Tuple[int, int, bool]] = [],
@@ -1745,8 +1766,8 @@ class NLNPreProcessingModules(nn.Module):
         verbose: bool = VERBOSE,
     ):
         super().__init__()
-        self.nb_in_concepts = nb_in_concepts
-        binary_indices = set(range(nb_in_concepts))
+        self.nb_in_features = nb_in_features
+        binary_indices = set(range(nb_in_features))
         nb_out_concepts = 0
 
         category_modules = []
@@ -2231,25 +2252,20 @@ class NLNPreProcessingModules(nn.Module):
 
         if len(self.binary_indices) > 0:
             results.append(x[:, self.binary_indices])
-            # eval("results.append(x[" + (len(x.shape) - 1) * ":, " + "self.binary_indices])")
 
         for i, category_module in enumerate(self.category_modules):
             first_idx, last_idx, has_missing_values = self.category_first_last_has_missing_values_tuples[i]
             if has_missing_values:
                 category_module.missing_idcs = torch.nonzero((x[:, first_idx : last_idx + 1] == 0).all(dim=-1)).view(-1).tolist()
-                # eval("category_module.missing_idcs = torch.nonzero((x[" + (len(x.shape) - 1) * ":, " + "first_idx : last_idx + 1] == 0).all(dim=-1)).view(-1).tolist()")
             results.append(category_module(x[:, first_idx : last_idx + 1]))
-            # eval("results.append(category_module(x[" + (len(x.shape) - 1) * ":, " + "first_idx : last_idx + 1]))")
 
         for i, continuous_module in enumerate(self.continuous_modules):
             idx, min_value, max_value, has_missing_values = self.continuous_index_min_max_has_missing_values_tuples[i]
             results.append(continuous_module(x[:, idx]))
-            # eval("results.append(continuous_module(x[" + (len(x.shape) - 1) * ":, " + "idx]))")
 
         for i, periodic_module in enumerate(self.periodic_modules):
             idx, period, has_missing_values = self.periodic_index_period_has_missing_values_tuples[i]
             results.append(periodic_module(x[:, idx]))
-            # eval("results.append(periodic_module(x[" + (len(x.shape) - 1) * ":, " + "idx]))")
 
         if len(results) == 1:
             return results[0]
@@ -2324,7 +2340,7 @@ class NLNPreProcessingModules(nn.Module):
 
     def __repr__(self):
         string = ""
-        for in_concept_idx in range(self.nb_in_concepts):
+        for in_concept_idx in range(self.nb_in_features):
             found = False
             if not found:
                 if in_concept_idx in self.binary_indices:
@@ -2817,7 +2833,7 @@ class NeuralLogicNetwork(nn.Module):
 
     def __init__(
         self,
-        nb_in_concepts: int,
+        nb_in_features: int,
         nb_out_concepts: int,
         nb_concepts_per_hidden_layer: int = NB_RULES,
         nb_hidden_layers: int = 1,
@@ -2839,7 +2855,7 @@ class NeuralLogicNetwork(nn.Module):
         init_string="",
     ):
         super().__init__()
-        self.nb_in_concepts = nb_in_concepts
+        self.nb_in_features = nb_in_features
         self.nb_out_concepts = nb_out_concepts
         if nb_hidden_layers < 1:
             raise Exception("NLN must contain at least one hidden layer.")
@@ -2868,7 +2884,7 @@ class NeuralLogicNetwork(nn.Module):
             (idx, period, has_missing_values) for idx, period, has_missing_values in periodic_index_period_has_missing_values_tuples
         ]
         self.input_module = NLNPreProcessingModules(
-            nb_in_concepts,
+            nb_in_features,
             train_forw_weight_quant=train_forw_weight_quant,
             approx_AND_OR_params=approx_AND_OR_params,
             category_first_last_has_missing_values_tuples=category_first_last_has_missing_values_tuples,
@@ -3068,7 +3084,7 @@ class NeuralLogicNetwork(nn.Module):
 
         merged_module.input_module, idx_translation_by_module = NLNPreProcessingModules.merge_modules(
             [module.input_module for module in modules],
-            merged_module.nb_in_concepts,
+            merged_module.nb_in_features,
             train_forw_weight_quant=merged_module.train_forw_weight_quant,
             approx_AND_OR_params=merged_module.approx_AND_OR_params,
             category_first_last_has_missing_values_tuples=merged_module.category_first_last_has_missing_values_tuples,
@@ -3160,10 +3176,14 @@ class NeuralLogicNetwork(nn.Module):
 
     def forward(self, x):
         """Forward pass"""
-        x = self.input_module(x)
-        result = self.layers(x)
-        # print("LNN -> "+str(result.shape))
-        return result
+        if len(x.shape) > 1 or self.nb_in_features > 1:
+            x_shape_prefix = list(x.shape[0:-1])
+        else:
+            x_shape_prefix = [x.shape[0]]
+        x_v = x.view(-1, self.nb_in_features)
+        result = self.input_module(x_v)
+        result = self.layers(result)
+        return result.view(x_shape_prefix + [self.nb_out_concepts])
 
     def add_regularization(self, loss):
         loss = self.input_module.add_regularization(loss)
@@ -3221,7 +3241,7 @@ class NeuralLogicNetwork(nn.Module):
             if torch.max(self.layers[-1].observed_concepts).item() > 0:
                 for out_OR_concept_idx in range(self.nb_out_concepts):
                     single_OR_copy = copy.deepcopy(self)
-                    single_OR_copy.feature_names = single_OR_copy.feature_names[: single_OR_copy.nb_in_concepts] + [
+                    single_OR_copy.feature_names = single_OR_copy.feature_names[: single_OR_copy.nb_in_features] + [
                         single_OR_copy.feature_names[-1 * (single_OR_copy.nb_out_concepts - out_OR_concept_idx)]
                     ]
                     single_OR_copy.nb_out_concepts = 1
@@ -4239,7 +4259,7 @@ class NeuralLogicNetwork(nn.Module):
         if can_retrain:
             if must_retrain:
                 self = NeuralLogicNetwork(
-                    nb_in_concepts=self.nb_in_concepts,
+                    nb_in_features=self.nb_in_features,
                     nb_out_concepts=self.nb_out_concepts,
                     nb_hidden_layers=len(self.layers) - 1,
                     nb_concepts_per_hidden_layer=self.nb_concepts_per_hidden_layer,
