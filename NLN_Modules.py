@@ -1895,7 +1895,7 @@ class NLNPreProcessingModules(nn.Module):
     @staticmethod
     def merge_modules(
         modules,
-        nb_in_concepts: int,
+        nb_in_features: int,
         train_forw_weight_quant: str = TRAIN_FORW_WEIGHT_QUANT,
         approx_AND_OR_params: Union[None, Tuple[float, float, float]] = APPROX_PARAMS,
         category_first_last_has_missing_values_tuples: List[Tuple[int, int, bool]] = [],
@@ -1911,11 +1911,11 @@ class NLNPreProcessingModules(nn.Module):
         device=DEVICE,
         verbose: bool = VERBOSE,
     ):
-        if len(set([module.nb_in_concepts for module in modules])) > 1:
-            raise Exception("The merged modules must have the same number of input concepts.")
+        if len(set([module.nb_in_features for module in modules])) > 1:
+            raise Exception("The merged modules must have the same number of input features.")
 
         merged_module = NLNPreProcessingModules(
-            nb_in_concepts,
+            nb_in_features,
             train_forw_weight_quant=train_forw_weight_quant,
             approx_AND_OR_params=approx_AND_OR_params,
             category_first_last_has_missing_values_tuples=category_first_last_has_missing_values_tuples,
@@ -3017,8 +3017,8 @@ class NeuralLogicNetwork(nn.Module):
 
     @staticmethod
     def merge_modules(modules):
-        if len(set([module.nb_in_concepts for module in modules])) > 1:
-            raise Exception("The merged modules must have the same number of input concepts.")
+        if len(set([module.nb_in_features for module in modules])) > 1:
+            raise Exception("The merged modules must have the same number of input features.")
         if len(set([module.nb_out_concepts for module in modules])) > 1:
             raise Exception("The merged modules must have the same number of output concepts.")
         if len(set([module.nb_hidden_layers for module in modules])) > 1:
@@ -3038,7 +3038,7 @@ class NeuralLogicNetwork(nn.Module):
             return sorted([(value, values.count(value)) for value in set(values)], key=lambda pair: pair[1], reverse=True)[0][0]
 
         merged_module = NeuralLogicNetwork(
-            modules[0].nb_in_concepts,
+            modules[0].nb_in_features,
             modules[0].nb_out_concepts,
             nb_concepts_per_hidden_layer=sum([module.nb_concepts_per_hidden_layer for module in modules]),
             nb_hidden_layers=modules[0].nb_hidden_layers,
@@ -3736,6 +3736,7 @@ class NeuralLogicNetwork(nn.Module):
                         continuous_copy.layers[-1].unobserved_concepts.data[:] = 1
                         continuous_copy.simplify()
                         continuous_copy.input_module.continuous_index_min_max_has_missing_values_tuples = [(0, min_value, max_value, has_missing_values)]
+                        continuous_copy.nb_in_features = 1
                         continuous_copy.eval()
                         torch_plot_y_coordinates = continuous_copy.forward(torch_plot_x_coordinates)
                         plot_y_coordinates = torch_plot_y_coordinates.view(-1).cpu().tolist()
