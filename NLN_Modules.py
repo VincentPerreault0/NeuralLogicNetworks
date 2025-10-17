@@ -1194,8 +1194,6 @@ class AndConcepts(CombinationConcepts):
             g_W_pos = 1.0 - 1.0 / (1.0 - (alpha * F.relu(observed_concepts)) ** beta)
             g_W_neg = 1.0 - 1.0 / (1.0 - (alpha * F.relu(-1 * observed_concepts)) ** beta)
             if not combine_grouped:
-                print(g_not_x.shape, g_W_pos.T.shape)
-                print(g_x.shape, g_W_neg.T.shape)
                 return g_not_x @ g_W_pos.T + g_x @ g_W_neg.T
             else:
                 return torch.sum(g_not_x * g_W_pos + g_x * g_W_neg, dim=-1)
