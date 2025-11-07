@@ -30,7 +30,10 @@ from NLN_Modules import (
 )
 
 USE_TRAIN_VAL_SPLIT = True
+
 MIN_NB_TRAINING_STEPS_BEFORE_REVIEW = 8
+
+PRUNE_RULES_IN_BIAS_COVERAGE_ORDER = False
 
 
 class NLN:
@@ -82,6 +85,7 @@ class NLN:
         do_save_training_progression_plots: bool = False,
         log_model_every_training_epoch: bool = False,
         init_string="",
+        is_merged=False,
     ):
         self.filename = NLN_filename
         self.use_train_val_split = use_train_val_split
@@ -110,7 +114,7 @@ class NLN:
         self.criterion = criterion
         if train_forw_weight_quant not in ["", "thresh", "stoch", "sthresh"]:
             raise Exception(
-                'Undefined train_forw_weight_quant. The only possible weight discretization methods in the forward pass of the gradient grafting are\n\t"" (no weight discretization);\n\t"thresh" (threshold discretization): sign(w) if |w| >= 0.5 else 0;\n\t"stoch" (stochastic discretization): sign(w) with prob |w| else 0;\n\t"sthresh" (stochastic threshold discretization): sign(w) if |w| >= thresh else 0 where thresh is sampled in [0,1[.'
+                f'Undefined train_forw_weight_quant {train_forw_weight_quant}. The only possible weight discretization methods in the forward pass of the gradient grafting are\n\t"" (no weight discretization);\n\t"thresh" (threshold discretization): sign(w) if |w| >= 0.5 else 0;\n\t"stoch" (stochastic discretization): sign(w) with prob |w| else 0;\n\t"sthresh" (stochastic threshold discretization): sign(w) if |w| >= thresh else 0 where thresh is sampled in [0,1[.'
             )
 
         self.adam_lr = adam_lr
@@ -142,9 +146,13 @@ class NLN:
         self.has_saved_final_plots = False
         self.has_evaluated_and_or_plotted_stats = False
         self.has_learned = False
-        if discretization_method not in ["sel_desc", "sel_asc", "sub", "add", "thresh", "stoch", "qthresh"]:
+        if (
+            discretization_method not in ["sel_desc", "sel_asc", "sub", "add", "thresh"]
+            and not (discretization_method[:5] == "stoch" and (discretization_method[5:] == "In" or discretization_method[5:].isdigit()))
+            and not (discretization_method[:7] == "qthresh" and (discretization_method[7:] == "In" or discretization_method[7:].isdigit()))
+        ):
             raise Exception(
-                'Undefined discretization_method. The only possible discretization_methods are\n\t"sel_desc" (selective, descending);\n\t"sel_asc" (selective, ascending);\n\t"sub" (subtractive); \n\t"add" (additive);\n\t"thresh" (threshold);\n\t"stoch" (stochastic);\n\t"qthresh" (quantile threshold).'
+                f'Undefined discretization_method {discretization_method}. The only possible quantize_types are\n\t"sel_desc" (selective, descending);\n\t"sel_asc" (selective, ascending);\n\t"sub" (subtractive); \n\t"add" (additive);\n\t"thresh" (threshold);\n\t"stoch<...>" (stochastic), e.g. "stochIn" or "stoch20";\n\t"qthresh<...>" (quantile threshold), e.g. "qthreshIn" or "qthresh20"'
             )
         self.discretization_method = discretization_method
         self.verbose = verbose
@@ -175,6 +183,7 @@ class NLN:
             verbose=verbose,
             init_string=init_string,
         )
+        self.is_merged = is_merged
 
     def set(
         self,
@@ -543,6 +552,7 @@ class NLN:
             do_save_training_progression_plots=bool(round(mean([model.do_save_training_progression_plots for model in models]))),
             log_model_every_training_epoch=bool(round(mean([model.log_model_every_training_epoch for model in models]))),
             init_string=str(merged_torch_module),
+            is_merged=True,
         )
 
         merged_model.has_trained = bool(prod([model.has_trained for model in models]))
@@ -799,7 +809,18 @@ class NLN:
                         progress_bar_hook = lambda iteration, nb_iterations: printProgressBar(iteration, nb_iterations, prefix=f"Pruning...  ", suffix="", length=50)
 
                     start = time.time()
-                    self.torch_module.prune(self._eval_train_val_loss, self.save, filename=filename, do_log=self.do_log, progress_bar_hook=progress_bar_hook)
+                    if (PRUNE_RULES_IN_BIAS_COVERAGE_ORDER or self.is_merged) and self.torch_module.last_layer_is_OR_no_neg:
+                        get_rule_prune_order_func = self._get_rule_prune_order
+                    else:
+                        get_rule_prune_order_func = lambda: None
+                    self.torch_module.prune(
+                        self._eval_train_val_loss,
+                        self.save,
+                        get_rule_prune_order_func=get_rule_prune_order_func,
+                        filename=filename,
+                        do_log=self.do_log,
+                        progress_bar_hook=progress_bar_hook,
+                    )
                     self.prune_time = time.time() - start
                     print_log(f"Pruning time: {self.prune_time:.3e} seconds", True, timing_files)
                     self.has_pruned = True
@@ -952,6 +973,25 @@ class NLN:
 
     def _eval_train_val_loss(self):
         return self._validate(self.train_val_loader, override="")[0]
+
+    def _get_rule_prune_order(self):
+        cumul_presences, inclusion_matrix = self._do_dataset_coverage_analysis([self.train_val_loader])
+
+        rule_idx_bias_coverage_tuples = []
+        for rule_idx in range(self.torch_module.layers[-1].nb_in_concepts):
+            rule_uses = sorted(torch.nonzero(self.torch_module.layers[-1].observed_concepts[:, rule_idx]).view(-1).tolist())
+            if len(rule_uses) == 0:
+                rule_coverage = 0
+            else:
+                if not self.train_dataset.is_multi_label:
+                    rule_coverage = min(cumul_presences[rule_uses[0], rule_idx] / cumul_presences[rule_uses[0], -1], 1)
+                else:
+                    rule_coverage = min(cumul_presences[2 * rule_uses[0], rule_idx] / cumul_presences[2 * rule_uses[0], -1], 1)
+            rule_idx_bias_coverage_tuples.append((rule_idx, self.torch_module.layers[-2].unobserved_concepts[rule_idx].item(), rule_coverage))
+
+        rule_idx_bias_coverage_tuples.sort(key=lambda triple: triple[1] + 1e-4 * triple[2])
+
+        return [rule_idx for rule_idx, rule_bias, rule_coverage in rule_idx_bias_coverage_tuples]
 
     def _train(
         self,

@@ -831,13 +831,15 @@ class CombinationConcepts(nn.Module):
                 self.observed_concepts.data[new_use, old_rule_idx + new_in_copy_uses_idx] = old_observed_concepts[new_use, old_rule_idx]
         self.observed_concepts.data[:, old_rule_idx + len(new_uses) :] = old_observed_concepts[:, old_rule_idx + 1 :]
 
-    def prune(self, eval_model_func, init_loss=-1, log_files=[], progress_bar_hook=lambda weight: None):
+    def prune(self, eval_model_func, init_loss=-1, in_concepts_prune_order=None, log_files=[], progress_bar_hook=lambda weight: None):
         did_prune = False
         if init_loss < 0:
             init_loss = eval_model_func()
         current_weight = 0
+        if in_concepts_prune_order == None:
+            in_concepts_prune_order = list(range(self.nb_in_concepts))
         for out_idx in range(self.nb_out_concepts):
-            for in_idx in range(self.nb_in_concepts):
+            for in_idx in in_concepts_prune_order:
                 if self.observed_concepts.data[out_idx, in_idx] != 0:
                     old_value = self.observed_concepts.data[out_idx, in_idx].item()
                     self.observed_concepts.data[out_idx, in_idx] = 0
@@ -3112,11 +3114,12 @@ class NeuralLogicNetwork(nn.Module):
             module_first_layer = module.layers[0]
             if module_first_layer.is_grouped:
                 module_first_layer.ungroup()
-            for module_in_idx in range(module_first_layer.nb_in_concepts):
-                merged_in_idx = idx_translation_by_module[module_idx][module_in_idx]
-                merged_first_layer.observed_concepts.data[nb_out_concepts : nb_out_concepts + module_first_layer.nb_out_concepts, merged_in_idx] = (
-                    module_first_layer.observed_concepts.data[:, module_in_idx]
-                )
+            if len(idx_translation_by_module[module_idx]) > 0:
+                for module_in_idx in range(module_first_layer.nb_in_concepts):
+                    merged_in_idx = idx_translation_by_module[module_idx][module_in_idx]
+                    merged_first_layer.observed_concepts.data[nb_out_concepts : nb_out_concepts + module_first_layer.nb_out_concepts, merged_in_idx] = (
+                        module_first_layer.observed_concepts.data[:, module_in_idx]
+                    )
             if merged_first_layer.use_unobserved:
                 merged_first_layer.unobserved_concepts.data[nb_out_concepts : nb_out_concepts + module_first_layer.nb_out_concepts] = module_first_layer.unobserved_concepts.data
             nb_out_concepts += module_first_layer.nb_out_concepts
@@ -4335,7 +4338,16 @@ class NeuralLogicNetwork(nn.Module):
         return simplified_model
 
     def prune(
-        self, eval_model_func, save_model_func, init_loss=-1, filename="", do_log=True, prune_log_files=[], progress_bar_hook=lambda iteration, nb_iterations: None, init_weight=0
+        self,
+        eval_model_func,
+        save_model_func,
+        init_loss=-1,
+        get_rule_prune_order_func=lambda: None,
+        filename="",
+        do_log=True,
+        prune_log_files=[],
+        progress_bar_hook=lambda iteration, nb_iterations: None,
+        init_weight=0,
     ):
         if filename != "" and prune_log_files == []:
             prune_log_files = get_log_files(filename, do_log)
@@ -4346,9 +4358,15 @@ class NeuralLogicNetwork(nn.Module):
         total_nb_weights = self._get_nb_weights()
         current_weight = 0
         for i, layer in enumerate(reversed(self.layers)):
+            i = len(self.layers) - i - 1
+            if i == len(self.layers) - 1 and self.last_layer_is_OR_no_neg:
+                in_concepts_prune_order = get_rule_prune_order_func()
+            else:
+                in_concepts_prune_order = None
             init_loss, local_did_prune = layer.prune(
                 eval_model_func,
                 init_loss=init_loss,
+                in_concepts_prune_order=in_concepts_prune_order,
                 log_files=prune_log_files,
                 progress_bar_hook=lambda loc_weight: progress_bar_hook(init_weight + current_weight + loc_weight, init_weight + total_nb_weights + 1),
             )
@@ -4368,7 +4386,13 @@ class NeuralLogicNetwork(nn.Module):
         if did_prune:
             save_model_func()
             init_loss = self.prune(
-                eval_model_func, save_model_func, init_loss=init_loss, prune_log_files=prune_log_files, progress_bar_hook=progress_bar_hook, init_weight=total_nb_weights
+                eval_model_func,
+                save_model_func,
+                init_loss=init_loss,
+                get_rule_prune_order_func=get_rule_prune_order_func,
+                prune_log_files=prune_log_files,
+                progress_bar_hook=progress_bar_hook,
+                init_weight=total_nb_weights,
             )
         else:
             progress_bar_hook(1, 1)
