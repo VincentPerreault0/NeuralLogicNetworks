@@ -501,7 +501,7 @@ class NLN:
             return pickle.load(open(filename + ".pkl", "rb"))
 
     @staticmethod
-    def merge_models(models, merged_model_filename):
+    def merge_models(models, merged_model_filename, delete_input_models=False, device_override=None):
         def get_most_used_value(values):
             return sorted([(value, values.count(value)) for value in set(values)], key=lambda pair: pair[1], reverse=True)[0][0]
 
@@ -544,7 +544,7 @@ class NLN:
             random_init_unobs=merged_torch_module.random_init_unobs,
             empty_init_targets=merged_torch_module.empty_init_targets,
             empty_reset_in_concepts=merged_torch_module.empty_reset_in_concepts,
-            device=merged_torch_module.device,
+            device=merged_torch_module.device if device_override == None else device_override,
             verbose=merged_torch_module.verbose,
             do_log=bool(round(mean([model.do_log for model in models]))),
             do_save_intermediate_learning_model_plots=bool(round(mean([model.do_save_intermediate_learning_model_plots for model in models]))),
@@ -566,6 +566,12 @@ class NLN:
         merged_model.has_saved_final_plots = False
         merged_model.has_evaluated_and_or_plotted_stats = False
         merged_model.has_learned = False
+
+        if delete_input_models:
+            models = list(models)
+            while len(models) > 0:
+                input_model = models.pop()
+                del input_model
 
         merged_model = merged_model.learn()
 

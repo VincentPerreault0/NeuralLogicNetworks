@@ -40,6 +40,8 @@ EMPTY_RESET_IN_CONCEPTS = True
 
 NB_DICHOTOMIES_PER_CONTINUOUS = 32
 
+NB_PRUNED_WEIGHTS_IN_SAME_LAYER_TO_SAVE = 500
+
 
 def find_lexicographical_order(matrix, order_outs=True, output_list=None, equivalency_classes=None):
     if equivalency_classes == None:
@@ -831,7 +833,7 @@ class CombinationConcepts(nn.Module):
                 self.observed_concepts.data[new_use, old_rule_idx + new_in_copy_uses_idx] = old_observed_concepts[new_use, old_rule_idx]
         self.observed_concepts.data[:, old_rule_idx + len(new_uses) :] = old_observed_concepts[:, old_rule_idx + 1 :]
 
-    def prune(self, eval_model_func, init_loss=-1, in_concepts_prune_order=None, log_files=[], progress_bar_hook=lambda weight: None):
+    def prune(self, eval_model_func, save_model_func, init_loss=-1, in_concepts_prune_order=None, log_files=[], progress_bar_hook=lambda weight: None):
         did_prune = False
         if init_loss < 0:
             init_loss = eval_model_func()
@@ -861,6 +863,8 @@ class CombinationConcepts(nn.Module):
                         )
                         init_loss = new_loss
                     current_weight += 1
+                    if current_weight % NB_PRUNED_WEIGHTS_IN_SAME_LAYER_TO_SAVE == 0:
+                        save_model_func()
                     progress_bar_hook(current_weight)
         return init_loss, did_prune
 
@@ -1677,19 +1681,19 @@ class ContinuousPreProcessingModule(nn.Module):
         must_retrain = must_retrain or len(duplicate_lists) > 0
         return duplicate_lists, must_retrain
 
-    def prune(self, eval_model_func, init_loss=-1, log_files=[], progress_bar_hook=lambda weight: None):
+    def prune(self, eval_model_func, save_model_func, init_loss=-1, log_files=[], progress_bar_hook=lambda weight: None):
         did_prune = False
         if init_loss < 0:
             init_loss = eval_model_func()
         current_weight = 0
         old_module_nb_weights = self.out_concepts.get_nb_weights()
         init_loss, local_did_prune = self.out_concepts.prune(
-            eval_model_func, init_loss=init_loss, log_files=log_files, progress_bar_hook=lambda loc_weight: progress_bar_hook(current_weight + loc_weight)
+            eval_model_func, save_model_func, init_loss=init_loss, log_files=log_files, progress_bar_hook=lambda loc_weight: progress_bar_hook(current_weight + loc_weight)
         )
         did_prune = did_prune or local_did_prune
         current_weight += old_module_nb_weights
         init_loss, local_did_prune = self.intervals.prune(
-            eval_model_func, init_loss=init_loss, log_files=log_files, progress_bar_hook=lambda loc_weight: progress_bar_hook(current_weight + loc_weight)
+            eval_model_func, save_model_func, init_loss=init_loss, log_files=log_files, progress_bar_hook=lambda loc_weight: progress_bar_hook(current_weight + loc_weight)
         )
         did_prune = did_prune or local_did_prune
         return init_loss, did_prune
@@ -2711,7 +2715,7 @@ class NLNPreProcessingModules(nn.Module):
         else:
             return duplicate_lists
 
-    def prune(self, eval_model_func, init_loss=-1, log_files=[], progress_bar_hook=lambda weight: None):
+    def prune(self, eval_model_func, save_model_func, init_loss=-1, log_files=[], progress_bar_hook=lambda weight: None):
         did_prune = False
         if init_loss < 0:
             init_loss = eval_model_func()
@@ -2719,23 +2723,26 @@ class NLNPreProcessingModules(nn.Module):
         for category_module in self.category_modules:
             old_module_nb_weights = category_module.get_nb_weights()
             init_loss, local_did_prune = category_module.prune(
-                eval_model_func, init_loss=init_loss, log_files=log_files, progress_bar_hook=lambda loc_weight: progress_bar_hook(current_weight + loc_weight)
+                eval_model_func, save_model_func, init_loss=init_loss, log_files=log_files, progress_bar_hook=lambda loc_weight: progress_bar_hook(current_weight + loc_weight)
             )
             did_prune = did_prune or local_did_prune
+            save_model_func()
             current_weight += old_module_nb_weights
         for continuous_module in self.continuous_modules:
             old_module_nb_weights = continuous_module.get_nb_weights()
             init_loss, local_did_prune = continuous_module.prune(
-                eval_model_func, init_loss=init_loss, log_files=log_files, progress_bar_hook=lambda loc_weight: progress_bar_hook(current_weight + loc_weight)
+                eval_model_func, save_model_func, init_loss=init_loss, log_files=log_files, progress_bar_hook=lambda loc_weight: progress_bar_hook(current_weight + loc_weight)
             )
             did_prune = did_prune or local_did_prune
+            save_model_func()
             current_weight += old_module_nb_weights
         for periodic_module in self.periodic_modules:
             old_module_nb_weights = periodic_module.get_nb_weights()
             init_loss, local_did_prune = periodic_module.prune(
-                eval_model_func, init_loss=init_loss, log_files=log_files, progress_bar_hook=lambda loc_weight: progress_bar_hook(current_weight + loc_weight)
+                eval_model_func, save_model_func, init_loss=init_loss, log_files=log_files, progress_bar_hook=lambda loc_weight: progress_bar_hook(current_weight + loc_weight)
             )
             did_prune = did_prune or local_did_prune
+            save_model_func()
             current_weight += old_module_nb_weights
         return init_loss, did_prune
 
@@ -4365,6 +4372,7 @@ class NeuralLogicNetwork(nn.Module):
                 in_concepts_prune_order = None
             init_loss, local_did_prune = layer.prune(
                 eval_model_func,
+                save_model_func,
                 init_loss=init_loss,
                 in_concepts_prune_order=in_concepts_prune_order,
                 log_files=prune_log_files,
@@ -4376,6 +4384,7 @@ class NeuralLogicNetwork(nn.Module):
             current_weight = sum([layer.get_nb_weights() for j, layer in enumerate(reversed(self.layers)) if j <= i])
         init_loss, local_did_prune = self.input_module.prune(
             eval_model_func,
+            save_model_func,
             init_loss=init_loss,
             log_files=prune_log_files,
             progress_bar_hook=lambda loc_weight: progress_bar_hook(init_weight + current_weight + loc_weight, init_weight + total_nb_weights + 1),
@@ -4662,48 +4671,127 @@ class NeuralLogicNetwork(nn.Module):
         if len(self.layers) != 2:
             raise Exception("Case with other than 2 fully-connected layers is not coded yet.")
 
-        if len(self.input_module.category_modules) > 0 or len(self.input_module.continuous_modules) > 0 or len(self.input_module.periodic_modules) > 0:
-            raise Exception("Case with input module is not coded yet.")
+        if not USE_RULE_MODULE and (len(self.input_module.category_modules) > 0 or len(self.input_module.continuous_modules) > 0 or len(self.input_module.periodic_modules) > 0):
+            raise Exception("Case without rule modules is not coded yet.")
+        if self.layers[0].is_grouped:
+            raise Exception("Case with grouped first layer is not coded yet.")
 
-        output_target_idcs = list(range(len(self.feature_names)))
-        for idx in self.binary_indices:
-            output_target_idcs.remove(idx)
-        for first_idx, last_idx, has_missing_values in self.category_first_last_has_missing_values_tuples:
-            for idx in range(first_idx, last_idx + 1):
-                output_target_idcs.remove(idx)
-        for idx, min_value, max_value, has_missing_values in self.continuous_index_min_max_has_missing_values_tuples:
-            output_target_idcs.remove(idx)
-        for idx, period, has_missing_values in self.periodic_index_period_has_missing_values_tuples:
-            output_target_idcs.remove(idx)
+        output_target_idcs = self._get_target_indices()
 
         string = ""
-        is_first_line = True
-        for out_concept in range(self.nb_out_concepts):
-            for mid_concept in range(self.layers[-1].nb_in_concepts):
-                observed_concept = self.layers[-1].observed_concepts.data[out_concept, mid_concept].item()
-                if observed_concept == 1:
-                    if not is_first_line:
-                        string += "\n"
-                    string += self.feature_names[output_target_idcs[out_concept]] + " <- "
-                    is_first_litteral = True
-                    for in_concept in range(self.layers[0].nb_in_concepts):
-                        observed_concept = self.layers[0].observed_concepts.data[mid_concept, in_concept].item()
-                        if observed_concept == 1:
-                            if not is_first_litteral:
-                                string += ", "
-                            string += self.feature_names[self.input_module.binary_indices[in_concept]]
-                            if is_first_litteral:
-                                is_first_litteral = False
-                        elif observed_concept == -1:
-                            if not is_first_litteral:
-                                string += ", "
-                            string += "¬" + self.feature_names[self.input_module.binary_indices[in_concept]]
-                            if is_first_litteral:
-                                is_first_litteral = False
-                        elif observed_concept != 0:
-                            raise Exception("Case with first layer not taking values in {-1, 0, 1} is not coded yet.")
-                    if is_first_line:
-                        is_first_line = False
-                elif observed_concept != 0:
-                    raise Exception("Case with last layer not taking values in {0, 1} is not coded yet.")
+
+        approx_max_rule_counter_string_len = len(str(self.layers[0].nb_out_concepts))
+        rule_counter = 1
+        for rule_idx in range(self.layers[0].nb_out_concepts):
+            used_in_concepts = torch.nonzero(self.layers[0].observed_concepts.data[rule_idx, :]).view(-1).tolist()
+            if len(used_in_concepts) > 0:
+                if rule_counter > 1:
+                    string += "\n\n"
+                string += (approx_max_rule_counter_string_len - len(str(rule_counter))) * " " + f"({rule_counter})    IF  "
+                for used_in_concept_idx, used_in_concept in enumerate(used_in_concepts):
+                    if used_in_concept_idx > 0:
+                        string += " ,\n" + (approx_max_rule_counter_string_len + 2 + 8) * " "
+                        if used_in_concept_idx == len(used_in_concepts) - 1:
+                            string += "AND  "
+                    used_in_observed_concept = self.layers[0].observed_concepts.data[rule_idx, used_in_concept].item()
+                    if used_in_observed_concept not in [-1, 1]:
+                        raise Exception("Case with observed concepts not taking values in {-1, 0, 1} is not coded yet.")
+                    is_used_positively = used_in_observed_concept == 1
+                    if len(self.layers[0].in_concepts_group_first_stop_pairs) == 0 or used_in_concept < self.layers[0].in_concepts_group_first_stop_pairs[0][0]:
+                        if is_used_positively:
+                            string += self.feature_names[self.input_module.binary_indices[used_in_concept]]
+                        else:
+                            string += f"NOT {self.feature_names[self.input_module.binary_indices[used_in_concept]]}"
+                    else:
+                        group_out_concept, in_group = self.layers[0]._get_out_concept_in_group_from_in_concept(used_in_concept)
+                        group_is_found = False
+                        group_idx = 0
+                        for i, category_module in enumerate(self.input_module.category_modules):
+                            if in_group == group_idx:
+                                category_name, values_names = self.input_module.get_category_values_names(i)
+                                module_used_in_concepts = torch.nonzero(category_module.observed_concepts.data[group_out_concept, :]).view(-1).tolist()
+                                if len(module_used_in_concepts) == 1:
+                                    if is_used_positively:
+                                        string += f"{category_name} = {values_names[module_used_in_concepts[0]]}"
+                                    else:
+                                        string += f"{category_name} ≠ {values_names[module_used_in_concepts[0]]}"
+                                else:
+                                    if is_used_positively:
+                                        string += f"{category_name} ∈ " + "{"
+                                    else:
+                                        string += f"{category_name} ∉ " + "{"
+                                    for module_used_in_concept_idx, module_used_in_concept in enumerate(module_used_in_concepts):
+                                        if module_used_in_concept_idx > 0:
+                                            string += ", "
+                                        string += values_names[module_used_in_concept]
+                                    string += "}"
+                                group_is_found = True
+                                break
+                            group_idx += 1
+                        if not group_is_found:
+                            for i, continuous_module in enumerate(self.input_module.continuous_modules):
+                                if in_group == group_idx:
+                                    idx, min_value, max_value, has_missing_values = self.input_module.continuous_index_min_max_has_missing_values_tuples[i]
+                                    module_used_intervals = torch.nonzero(continuous_module.out_concepts.observed_concepts.data[group_out_concept, :]).view(-1).tolist()
+                                    if len(module_used_intervals) == 1:
+                                        interval_used_dichotomies = torch.nonzero(continuous_module.intervals.observed_concepts.data[module_used_intervals[0], :]).view(-1).tolist()
+                                        interval_used_observed_concepts = [
+                                            continuous_module.intervals.observed_concepts.data[module_used_intervals[0], interval_used_dichotomy].item()
+                                            for interval_used_dichotomy in interval_used_dichotomies
+                                        ]
+                                        is_interval = len(set(interval_used_observed_concepts)) == 1
+                                        if is_interval:
+                                            if (is_used_positively and interval_used_observed_concepts[0] > 0) or (
+                                                not is_used_positively and interval_used_observed_concepts[0] < 0
+                                            ):
+                                                string += f"{self.input_module.feature_names[idx]} > "
+                                                string += f"{max([continuous_module.dichotomies.boundaries.data[interval_used_dichotomy].item() for interval_used_dichotomy in interval_used_dichotomies]):.4g}"
+                                            else:
+                                                string += f"{self.input_module.feature_names[idx]} < "
+                                                string += f"{min([continuous_module.dichotomies.boundaries.data[interval_used_dichotomy].item() for interval_used_dichotomy in interval_used_dichotomies]):.4g}"
+                                    if len(module_used_intervals) != 1 or not is_interval:
+                                        if is_used_positively:
+                                            string += f"{self.input_module.feature_names[idx]} ∈ "
+                                        else:
+                                            string += f"{self.input_module.feature_names[idx]} ∉ "
+                                        for module_used_interval_idx, module_used_interval in enumerate(module_used_intervals):
+                                            if module_used_interval_idx > 0:
+                                                string += " ∪ "
+                                            interval_positively_used_dichotomies = (
+                                                torch.nonzero(continuous_module.intervals.observed_concepts.data[module_used_interval, :] > 0).view(-1).tolist()
+                                            )
+                                            interval_negatively_used_dichotomies = (
+                                                torch.nonzero(continuous_module.intervals.observed_concepts.data[module_used_interval, :] < 0).view(-1).tolist()
+                                            )
+                                            string += "]"
+                                            if len(interval_positively_used_dichotomies) == 0:
+                                                string += "-∞"
+                                            else:
+                                                string += f"{max([continuous_module.dichotomies.boundaries.data[interval_used_dichotomy].item() for interval_used_dichotomy in interval_positively_used_dichotomies]):.4g}"
+                                            string += ","
+                                            if len(interval_negatively_used_dichotomies) == 0:
+                                                string += "+∞"
+                                            else:
+                                                string += f"{min([continuous_module.dichotomies.boundaries.data[interval_used_dichotomy].item() for interval_used_dichotomy in interval_negatively_used_dichotomies]):.4g}"
+                                            string += "["
+                                    group_is_found = True
+                                    break
+                                group_idx += 1
+                        if not group_is_found:
+                            for idx, period, has_missing_values in self.input_module.periodic_index_period_has_missing_values_tuples:
+                                raise Exception("Case with periodic inputs not coded yet.")
+                                group_idx += 1
+                string += " ,   THEN  "
+                used_out_concepts = torch.nonzero(self.layers[1].observed_concepts.data[:, rule_idx]).view(-1).tolist()
+                for used_out_concept_idx, used_out_concept in enumerate(used_out_concepts):
+                    if used_out_concept_idx > 0:
+                        string += " ,  "
+                    string += self.feature_names[output_target_idcs[used_out_concept]]
+                if self.layers[0].use_unobserved:
+                    rule_bias = self.layers[0].unobserved_concepts.data[rule_idx].item()
+                    if rule_bias < 1:
+                        string += f"  with probability {rule_bias:.3g}"
+                rule_counter += 1
+        if len(output_target_idcs) == 1:
+            string += "\n\n" + (approx_max_rule_counter_string_len - 1) * " " + f"(*)    OTHERWISE ,   THEN  NOT {self.feature_names[output_target_idcs[0]]}"
         return string
