@@ -2,7 +2,7 @@
 
 ## Description
 
-This repository implements the code for the paper [Neural Logic Networks for Interpretable Classification](https://arxiv.org/abs/2508.08172), not yet published.
+This repository implements the code for the paper [Neural Logic Networks for Interpretable Classification](https://openreview.net/pdf?id=CmJXxeimUk), published in TMLR.
 
 ## Requirements
 
