@@ -15,7 +15,7 @@ This project requires Python3 and [PyTorch](https://pytorch.org/get-started/loca
 First, clone the repository.
 
 ```
-$ git clone https://https://github.com/pedrosbmartins/optimal-decision-graphs.git
+$ git clone https://github.com/VincentPerreault0/NeuralLogicNetworks.git
 ```
 
 Then, create and activate a python environment (for instance, using [virtualenv](https://virtualenv.pypa.io/en/latest/)).
